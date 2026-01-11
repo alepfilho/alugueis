@@ -1,0 +1,19 @@
+<div class="dashboard-container">
+    <aside class="p-3">
+        <div class="h-full bg-green-300 p-3 rounded-md flex flex-col justify-start items-center">
+            <p-avatar label="HT" size="large" />
+
+            <div class="mt-8 space-y-3">
+                <a routerLink="/home/alugueis" pButton pTooltip="Alugueis" tooltipPosition="right">
+                    <i class="pi pi-home"></i>
+                </a>
+                <a routerLink="/home/inquilinos" pButton pTooltip="Inquilinos" tooltipPosition="right">
+                    <i class="pi pi-user"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+    <main class="relative p-4">
+        <router-outlet />
+    </main>
+</div>

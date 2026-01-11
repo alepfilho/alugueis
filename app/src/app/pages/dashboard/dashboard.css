@@ -1,0 +1,15 @@
+.dashboard-container {
+    display: flex;
+    height: 100vh;
+}
+
+aside {
+    width: 100px;
+    height: 100vh;
+    flex-shrink: 0;
+}
+
+main {
+    flex: 1;
+    overflow-y: auto;
+}

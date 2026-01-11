@@ -1,0 +1,147 @@
+<p-toast />
+<p-speeddial [model]="items" direction="up" [style]="{ position: 'fixed', right: 0, bottom: 0 }"
+    [buttonProps]="{ severity: 'help', rounded: true }" [tooltipOptions]="{ tooltipPosition: 'left' }" />
+
+<!-- Dialog para Adicionar Pagamento -->
+<p-dialog [(visible)]="displayDialogPagamento" [modal]="true" [style]="{ width: '50rem' }" header="Adicionar Pagamento"
+    [draggable]="false" [resizable]="false">
+    <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-1">
+            <label for="tipo" class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+            <p-select [options]="tiposPagamento" [(ngModel)]="novoPagamento.tipo" optionLabel="label"
+                placeholder="Selecione o tipo" class="w-full" />
+        </div>
+
+        <div class="col-span-1">
+            <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <p-select [options]="statusPagamento" [(ngModel)]="novoPagamento.status" optionLabel="label"
+                placeholder="Selecione o status" class="w-full" />
+        </div>
+
+        <div class="col-span-1">
+            <label for="dataVencimento" class="block text-sm font-medium text-gray-700 mb-2">Data de Vencimento</label>
+            <p-datepicker [(ngModel)]="novoPagamento.dataVencimento" dateFormat="dd/mm/yy" fluid />
+        </div>
+
+        <div class="col-span-1">
+            <label for="valor" class="block text-sm font-medium text-gray-700 mb-2">Valor</label>
+            <p-inputNumber id="valor" [(ngModel)]="novoPagamento.valor" mode="currency" currency="BRL" locale="pt-BR"
+                placeholder="Digite o valor" [style]="{ width: '100%' }">
+            </p-inputNumber>
+        </div>
+    </div>
+
+    <ng-template #footer>
+        <div class="flex justify-end gap-2">
+            <p-button label="Cancelar" severity="secondary" (onClick)="cancelarPagamento()"
+                [outlined]="true"></p-button>
+            <p-button label="Salvar" (onClick)="salvarPagamento()"></p-button>
+        </div>
+    </ng-template>
+</p-dialog>
+
+<div class="grid grid-cols-5 gap-5">
+    <!-- Dados do Imóvel -->
+    <p-card class="col-span-5" header="Dados do Imóvel">
+        <div class="grid grid-cols-5 gap-4">
+            <div class="col-span-5">
+                <p class="text-sm text-gray-600 mb-1">Endereço</p>
+                <p class="text-lg font-semibold">{{ imovel.endereco }}</p>
+            </div>
+
+            <div class="col-span-1">
+                <p class="text-sm text-gray-600 mb-1">Valor do Aluguel</p>
+                <p class="text-lg font-semibold text-green-600">{{ imovel.valorAluguel | currency: 'BRL' }}</p>
+            </div>
+
+            <div class="col-span-1">
+                <p class="text-sm text-gray-600 mb-1">Valor do Condomínio</p>
+                <p class="text-lg font-semibold text-purple-600">{{ imovel.valorCondominio | currency: 'BRL' }}</p>
+            </div>
+
+            <div class="col-span-1">
+                <p class="text-sm text-gray-600 mb-1">Valor do IPTU</p>
+                <p class="text-lg font-semibold text-orange-600">{{ imovel.valorIptu | currency: 'BRL' }}</p>
+            </div>
+
+            <div class="col-span-1">
+                <p class="text-sm text-gray-600 mb-1">Valor do Caução</p>
+                <p class="text-lg font-semibold text-blue-600">{{ imovel.valorCaucao | currency: 'BRL' }}</p>
+            </div>
+
+            <div class="col-span-1">
+                <p class="text-sm text-gray-600 mb-1">Data de Início do Contrato</p>
+                <p class="text-lg font-semibold">{{ imovel.dataInicioContrato | date: 'dd/MM/yyyy' }}</p>
+            </div>
+
+            <div class="col-span-5 mt-2">
+                <p-button label="Baixar Contrato PDF" icon="pi pi-download" (onClick)="downloadContrato()"
+                    severity="secondary" [outlined]="true">
+                </p-button>
+            </div>
+        </div>
+    </p-card>
+
+    <!-- Dados do Inquilino -->
+    <p-card class="col-span-2" header="Dados do Inquilino">
+        <div class="space-y-4">
+            <div>
+                <p class="text-sm text-gray-600 mb-1">Nome</p>
+                <p class="text-lg font-semibold">{{ imovel.inquilino?.nome }}</p>
+            </div>
+
+            <div>
+                <p class="text-sm text-gray-600 mb-1">Telefone</p>
+                <p class="text-lg">{{ imovel.inquilino?.telefone }}</p>
+            </div>
+
+            <div>
+                <p class="text-sm text-gray-600 mb-1">Email</p>
+                <p class="text-lg">{{ imovel.inquilino?.email }}</p>
+            </div>
+        </div>
+    </p-card>
+
+    <!-- Histórico de Pagamentos -->
+    <p-card class="col-span-3" header="Histórico de Pagamentos">
+        <p-table [value]="imovel.historicoPagamentos" stripedRows [tableStyle]="{'min-width': '50rem'}"
+            [paginator]="true" [rows]="5" [rowsPerPageOptions]="[5, 10, 20]">
+            <ng-template #header>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Mês/Referência</th>
+                    <th>Valor</th>
+                    <th>Vencimento</th>
+                    <th>Pagamento</th>
+                    <th>Status</th>
+                </tr>
+            </ng-template>
+            <ng-template #body let-pagamento>
+                <tr>
+                    <td>
+                        <span class="font-semibold">{{ getTipoPagamentoLabel(pagamento.tipo) }}</span>
+                    </td>
+                    <td>{{ pagamento.mesReferencia }}</td>
+                    <td>{{ pagamento.valor | currency: 'BRL' }}</td>
+                    <td>{{ pagamento.dataVencimento | date: 'dd/MM/yyyy' }}</td>
+                    <td>
+                        @if(pagamento.dataPagamento) {
+                        {{ pagamento.dataPagamento | date: 'dd/MM/yyyy' }}
+                        } @else {
+                        <span class="text-gray-400">-</span>
+                        }
+                    </td>
+                    <td>
+                        @if(pagamento.status === 'pago') {
+                        <p-tag severity="success" value="Pago" />
+                        } @else if(pagamento.status === 'atrasado') {
+                        <p-tag severity="danger" value="Atrasado" />
+                        } @else {
+                        <p-tag severity="warn" value="Pendente" />
+                        }
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </p-card>
+</div>
