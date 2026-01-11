@@ -7,19 +7,20 @@ import {
 } from "./chunk-3WXT4SWY.js";
 import {
   Button
-} from "./chunk-DSMFL5P4.js";
+} from "./chunk-BG3X5IGY.js";
 import "./chunk-LBT6TVNZ.js";
-import "./chunk-6IJDNM25.js";
-import {
-  DomHandler,
-  blockBodyScroll,
-  unblockBodyScroll
-} from "./chunk-MBBKGLFC.js";
+import "./chunk-MVSS2DAG.js";
+import "./chunk-5URSUQFM.js";
 import {
   TimesIcon,
   WindowMaximizeIcon,
   WindowMinimizeIcon
 } from "./chunk-7J2FKLSN.js";
+import {
+  DomHandler,
+  blockBodyScroll,
+  unblockBodyScroll
+} from "./chunk-MBBKGLFC.js";
 import {
   BaseComponent,
   PARENT_INSTANCE

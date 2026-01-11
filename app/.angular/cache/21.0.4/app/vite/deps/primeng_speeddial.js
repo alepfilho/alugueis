@@ -7,15 +7,20 @@ import {
   ButtonDirective,
   ButtonIcon,
   ButtonModule
-} from "./chunk-DSMFL5P4.js";
+} from "./chunk-BG3X5IGY.js";
 import {
   Ripple
 } from "./chunk-LBT6TVNZ.js";
-import "./chunk-6IJDNM25.js";
-import "./chunk-MBBKGLFC.js";
+import "./chunk-MVSS2DAG.js";
+import "./chunk-5URSUQFM.js";
 import {
   PlusIcon
 } from "./chunk-7J2FKLSN.js";
+import "./chunk-MBBKGLFC.js";
+import {
+  RouterModule
+} from "./chunk-ZALCR4HU.js";
+import "./chunk-W4UUOW3D.js";
 import {
   BaseComponent,
   PARENT_INSTANCE
@@ -26,10 +31,6 @@ import {
 import {
   BaseStyle
 } from "./chunk-FKRBMLYC.js";
-import {
-  RouterModule
-} from "./chunk-ZALCR4HU.js";
-import "./chunk-W4UUOW3D.js";
 import {
   PrimeTemplate,
   SharedModule

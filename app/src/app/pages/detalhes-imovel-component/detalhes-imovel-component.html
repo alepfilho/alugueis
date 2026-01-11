@@ -87,17 +87,17 @@
         <div class="space-y-4">
             <div>
                 <p class="text-sm text-gray-600 mb-1">Nome</p>
-                <p class="text-lg font-semibold">{{ imovel.inquilino?.nome }}</p>
+                <p class="text-lg font-semibold">{{ imovel.inquilino.nome }}</p>
             </div>
 
             <div>
                 <p class="text-sm text-gray-600 mb-1">Telefone</p>
-                <p class="text-lg">{{ imovel.inquilino?.telefone }}</p>
+                <p class="text-lg">{{ imovel.inquilino.telefone }}</p>
             </div>
 
             <div>
                 <p class="text-sm text-gray-600 mb-1">Email</p>
-                <p class="text-lg">{{ imovel.inquilino?.email }}</p>
+                <p class="text-lg">{{ imovel.inquilino.email }}</p>
             </div>
         </div>
     </p-card>
@@ -143,5 +143,68 @@
                 </tr>
             </ng-template>
         </p-table>
+    </p-card>
+
+    <!-- Bloco de Dúvidas - Chat -->
+    <p-card class="col-span-5 mt-4" header="Dúvidas - Assistente Virtual">
+        <div class="chat-container">
+            <div class="chat-messages" #chatMessages>
+                @if(mensagens.length === 0) {
+                <div class="welcome-message">
+                    <p class="text-gray-600 text-center">
+                        <i class="pi pi-comments text-2xl mb-2"></i>
+                        <br>
+                        Olá! Sou seu assistente virtual. Como posso ajudá-lo hoje?
+                    </p>
+                </div>
+                }
+                @for(mensagem of mensagens; track mensagem.id) {
+                <div class="mensagem" [ngClass]="{'mensagem-usuario': mensagem.remetente === 'usuario', 'mensagem-assistente': mensagem.remetente === 'assistente'}">
+                    <div class="mensagem-conteudo">
+                        <div class="mensagem-header">
+                            @if(mensagem.remetente === 'usuario') {
+                            <i class="pi pi-user"></i>
+                            <span class="font-semibold">Você</span>
+                            } @else {
+                            <i class="pi pi-robot"></i>
+                            <span class="font-semibold">Assistente</span>
+                            }
+                            <span class="mensagem-hora">{{ mensagem.hora | date: 'HH:mm' }}</span>
+                        </div>
+                        <div class="mensagem-texto">
+                            @if(mensagem.remetente === 'assistente' && mensagem.carregando) {
+                            <div class="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            } @else {
+                            {{ mensagem.texto }}
+                            }
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+            <div class="chat-input-container">
+                <div class="flex gap-2 w-full">
+                    <input 
+                        type="text" 
+                        pInputText 
+                        [(ngModel)]="novaMensagem" 
+                        (keydown.enter)="enviarMensagem()"
+                        placeholder="Digite sua dúvida aqui..."
+                        class="flex-1"
+                        [disabled]="enviandoMensagem"
+                    />
+                    <p-button 
+                        icon="pi pi-send" 
+                        (onClick)="enviarMensagem()"
+                        [disabled]="!novaMensagem.trim() || enviandoMensagem"
+                        [loading]="enviandoMensagem"
+                    ></p-button>
+                </div>
+            </div>
+        </div>
     </p-card>
 </div>
