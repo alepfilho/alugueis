@@ -5,18 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-
-
-interface IAlugueis {
-  id: number,
-  endereco: string,
-  valor_aluguel: number,
-  data_inicio: string,
-  status_iptu: boolean,
-  status_aluguel: boolean,
-  status_condominio: boolean,
-  inquilino: string
-}
+import { IAlugueis } from '../../Interfaces/IAlugueis';
 
 @Component({
   selector: 'app-alugueis-component',
@@ -30,14 +19,15 @@ export class AlugueisComponent implements OnInit {
   ngOnInit(): void {
     this.imoveis = [
       {
-        id: 1,
+        id: 'uuid-aqui',
         endereco: 'rua galvão bueno 485, ap 91',
         valor_aluguel: 1700.80,
         data_inicio: '10/01/2026',
         status_aluguel: true,
         status_iptu: false,
         status_condominio: true,
-        inquilino: 'Alexanxre P Filho'
+        inquilino: 'Alexanxre P Filho',
+        inquilino_id: 'uuid'
       }
     ]
   }

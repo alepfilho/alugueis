@@ -14,9 +14,12 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MenuItem } from 'primeng/api';
 import { MessageService } from 'primeng/api';
-import { Select } from 'primeng/select';
-import { DatePicker } from 'primeng/datepicker';
+import { SelectModule } from 'primeng/select';
+import { DatePickerModule } from 'primeng/datepicker';
+import { FileUploadModule } from 'primeng/fileupload';
+
 import { GeminiService } from '../../services/gemini-service';
+
 
 
 interface IInquilino {
@@ -56,6 +59,14 @@ interface IMensagemChat {
   carregando?: boolean;
 }
 
+interface IHistoricoContrato {
+  id: number;
+  nomeArquivo: string;
+  caminhoArquivo: string;
+  dataInserção: string;
+  tamanhoArquivo?: number;
+}
+
 @Component({
   selector: 'app-detalhes-imovel-component',
   imports: [
@@ -74,8 +85,9 @@ interface IMensagemChat {
     CommonModule,
     CurrencyPipe,
     DatePipe,
-    Select,
-    DatePicker
+    SelectModule,
+    DatePickerModule,
+    FileUploadModule
   ],
   providers: [MessageService],
   templateUrl: './detalhes-imovel-component.html',
@@ -87,6 +99,12 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   imovel!: IDetalhesImovel;
   items: MenuItem[] = [];
   displayDialogPagamento: boolean = false;
+  editandoImovel: boolean = false;
+  imovelEditado: IDetalhesImovel = {} as IDetalhesImovel;
+  dataInicioContratoEditada: Date | null = null;
+  displayDialogHistoricoContratos: boolean = false;
+  historicoContratos: IHistoricoContrato[] = [];
+  novoArquivoContrato: File | null = null;
   
   // Chat
   mensagens: IMensagemChat[] = [];
@@ -218,6 +236,31 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
         }
       ]
     };
+
+    // Inicializar histórico de contratos (mockado - substituir por chamada de serviço)
+    this.historicoContratos = [
+      {
+        id: 1,
+        nomeArquivo: 'contrato-001.pdf',
+        caminhoArquivo: '/assets/contratos/contrato-001.pdf',
+        dataInserção: '2026-01-10T00:00:00',
+        tamanhoArquivo: 245678
+      },
+      {
+        id: 2,
+        nomeArquivo: 'contrato-renovacao-001.pdf',
+        caminhoArquivo: '/assets/contratos/contrato-renovacao-001.pdf',
+        dataInserção: '2025-12-15T00:00:00',
+        tamanhoArquivo: 198432
+      },
+      {
+        id: 3,
+        nomeArquivo: 'contrato-inicial.pdf',
+        caminhoArquivo: '/assets/contratos/contrato-inicial.pdf',
+        dataInserção: '2025-01-10T00:00:00',
+        tamanhoArquivo: 312456
+      }
+    ];
   }
 
   getTipoPagamentoLabel(tipo: string): string {
@@ -496,6 +539,150 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   }
 
   // Método temporário para simular respostas (remover quando integrar com Gemini)
+  entrarModoEdicaoImovel(): void {
+    this.editandoImovel = true;
+    // Criar cópia dos dados para edição
+    this.imovelEditado = {
+      ...this.imovel,
+      inquilino: { ...this.imovel.inquilino }
+    };
+    // Converter string de data para Date object para o datepicker
+    if (this.imovel.dataInicioContrato) {
+      this.dataInicioContratoEditada = new Date(this.imovel.dataInicioContrato + 'T00:00:00');
+    }
+  }
+
+  cancelarEdicaoImovel(): void {
+    this.editandoImovel = false;
+    this.imovelEditado = {} as IDetalhesImovel;
+    this.dataInicioContratoEditada = null;
+    this.novoArquivoContrato = null;
+    // Limpar input file
+    const fileInput = document.getElementById('arquivoContrato') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }
+
+  salvarEdicaoImovel(): void {
+    // Converter Date object de volta para string
+    if (this.dataInicioContratoEditada) {
+      this.imovelEditado.dataInicioContrato = this.formatarData(this.dataInicioContratoEditada);
+    }
+    
+    // Processar upload de novo arquivo de contrato se houver
+    if (this.novoArquivoContrato) {
+      this.processarUploadContrato();
+    }
+    
+    // Atualizar dados do imóvel
+    this.imovel = {
+      ...this.imovelEditado,
+      inquilino: { ...this.imovelEditado.inquilino }
+    };
+    this.editandoImovel = false;
+    this.dataInicioContratoEditada = null;
+    this.novoArquivoContrato = null;
+    
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Sucesso',
+      detail: 'Dados do imóvel atualizados com sucesso!'
+    });
+  }
+
+  processarUploadContrato(): void {
+    if (!this.novoArquivoContrato) return;
+
+    // Aqui você faria o upload real do arquivo para o servidor
+    // Por enquanto, vamos simular adicionando ao histórico
+    const novoId = this.historicoContratos.length > 0 
+      ? Math.max(...this.historicoContratos.map(c => c.id)) + 1 
+      : 1;
+    
+    const novoContrato: IHistoricoContrato = {
+      id: novoId,
+      nomeArquivo: this.novoArquivoContrato.name,
+      caminhoArquivo: `/assets/contratos/${this.novoArquivoContrato.name}`, // Simulado
+      dataInserção: new Date().toISOString(),
+      tamanhoArquivo: this.novoArquivoContrato.size
+    };
+
+    // Adicionar ao início do histórico (mais recente primeiro)
+    this.historicoContratos.unshift(novoContrato);
+    
+    // Atualizar o arquivo atual do imóvel
+    this.imovelEditado.arquivoContrato = novoContrato.caminhoArquivo;
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Sucesso',
+      detail: 'Contrato enviado com sucesso!'
+    });
+  }
+
+  onFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file) {
+      // Validar tipo de arquivo (apenas PDF)
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Erro',
+          detail: 'Por favor, selecione apenas arquivos PDF'
+        });
+        return;
+      }
+      
+      // Validar tamanho (máximo 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Erro',
+          detail: 'O arquivo deve ter no máximo 10MB'
+        });
+        return;
+      }
+
+      this.novoArquivoContrato = file;
+    }
+  }
+
+  abrirHistoricoContratos(): void {
+    this.displayDialogHistoricoContratos = true;
+  }
+
+  fecharHistoricoContratos(): void {
+    this.displayDialogHistoricoContratos = false;
+  }
+
+  baixarContratoHistorico(contrato: IHistoricoContrato): void {
+    if (contrato.caminhoArquivo) {
+      // Se for uma URL completa, abre em nova aba
+      if (contrato.caminhoArquivo.startsWith('http://') || contrato.caminhoArquivo.startsWith('https://')) {
+        window.open(contrato.caminhoArquivo, '_blank');
+      } else {
+        // Se for um caminho relativo, tenta fazer download
+        const link = document.createElement('a');
+        link.href = contrato.caminhoArquivo;
+        link.download = contrato.nomeArquivo;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    }
+  }
+
+  formatarTamanhoArquivo(bytes: number | undefined): string {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
   private gerarRespostaSimulada(mensagem: string): string {
     const mensagemLower = mensagem.toLowerCase();
     

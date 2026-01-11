@@ -6,6 +6,7 @@ import { AlugueisComponent } from './pages/alugueis-component/alugueis-component
 import { InquilinosComponent } from './pages/inquilinos-component/inquilinos-component';
 import { ResumoComponent } from './pages/resumo-component/resumo-component';
 import { DetalhesImovelComponent } from './pages/detalhes-imovel-component/detalhes-imovel-component';
+import { DetalheLocatarioComponent } from './pages/detalhe-locatario/detalhe-locatario';
 
 export const routes: Routes = [
     {
@@ -33,6 +34,10 @@ export const routes: Routes = [
             {
                 path: 'detalhes-imovel',
                 component: DetalhesImovelComponent
+            },
+            {
+                path: 'detalhes-locatario',
+                component: DetalheLocatarioComponent
             }
         ]
     }

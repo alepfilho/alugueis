@@ -43,3 +43,4 @@ __screenshots__/
 Thumbs.db
 app/node_modules
 /ssh
+app/.angular

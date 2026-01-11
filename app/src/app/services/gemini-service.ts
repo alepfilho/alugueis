@@ -16,7 +16,7 @@ export class GeminiService {
   }
 
   private initializeGemini(): void {
-    this.apiKey = 'xxxxxxxxxxxx';
+    this.apiKey = 'xxxxxxxxxxx';
     
     if (!this.apiKey) {
       console.warn('Gemini API Key não configurada. Configure a chave antes de usar o serviço.');
