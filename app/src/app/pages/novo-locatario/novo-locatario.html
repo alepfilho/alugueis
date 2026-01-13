@@ -1,0 +1,56 @@
+<p-card class="col-span-5">
+    <form [formGroup]="locatarioForm" (ngSubmit)="onSubmit()">
+        <div class="grid grid-cols-2 gap-5 mb-4">
+            <!-- Nome -->
+            <div class="col-span-1">
+                <label for="nome" class="block mb-2 text-sm font-medium">Nome</label>
+                <input pInputText id="nome" formControlName="nome" class="w-full"
+                    [class.ng-invalid]="locatarioForm.get('nome')?.invalid && locatarioForm.get('nome')?.touched" />
+                @if (locatarioForm.get('nome')?.invalid && locatarioForm.get('nome')?.touched) {
+                <small class="p-error">Nome é obrigatório</small>
+                }
+            </div>
+
+            <!-- Telefone -->
+            <div class="col-span-1">
+                <label for="telefone" class="block mb-2 text-sm font-medium">Telefone</label>
+                <input pInputText id="telefone" formControlName="telefone" class="w-full"
+                    [class.ng-invalid]="locatarioForm.get('telefone')?.invalid && locatarioForm.get('telefone')?.touched" />
+                @if (locatarioForm.get('telefone')?.invalid && locatarioForm.get('telefone')?.touched) {
+                <small class="p-error">Telefone é obrigatório</small>
+                }
+            </div>
+
+            <!-- Email -->
+            <div class="col-span-1">
+                <label for="email" class="block mb-2 text-sm font-medium">E-mail</label>
+                <input pInputText id="email" type="email" formControlName="email" class="w-full"
+                    [class.ng-invalid]="locatarioForm.get('email')?.invalid && locatarioForm.get('email')?.touched" />
+                @if (locatarioForm.get('email')?.invalid && locatarioForm.get('email')?.touched) {
+                <small class="p-error">
+                    @if (locatarioForm.get('email')?.errors?.['required']) {
+                    E-mail é obrigatório
+                    } @else if (locatarioForm.get('email')?.errors?.['email']) {
+                    E-mail inválido
+                    }
+                </small>
+                }
+            </div>
+
+            <!-- Imóvel -->
+            <div class="col-span-1">
+                <label for="aluguel_id" class="block mb-2 text-sm font-medium">Imóvel</label>
+                <p-autocomplete fluid inputId="aluguel_id" formControlName="aluguel_id" [suggestions]="filteredImoveis"
+                    (completeMethod)="filterImoveis($event)" optionLabel="endereco"
+                    placeholder="Selecione ou digite um imóvel" [style]="{ width: '100%' }"
+                    [class.ng-invalid]="locatarioForm.get('aluguel_id')?.invalid && locatarioForm.get('aluguel_id')?.touched"
+                    [forceSelection]="false" />
+            </div>
+        </div>
+
+        <div class="col-span-1">
+            <p-button type="submit" label="Criar" icon="pi pi-plus" />
+        </div>
+
+    </form>
+</p-card>

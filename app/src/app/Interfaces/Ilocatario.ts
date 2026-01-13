@@ -1,7 +1,9 @@
 export interface ILocatario {
-    id: string,
+    id: number,
     nome: string,
-    telefone: number,
+    telefone: string,
     email: string,
-    aluguel_id: string
+    aluguel_id: string | null,
+    created_at?: string,
+    updated_at?: string
 }

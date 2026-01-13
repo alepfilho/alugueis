@@ -1,0 +1,161 @@
+<div class="grid grid-cols-5 gap-5">
+    <p-card class="col-span-5" header="Novo Imóvel">
+        <!-- Resumo de erros -->
+        @if (imovelForm.invalid && (imovelForm.touched || imovelForm.dirty)) {
+            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+                <p class="text-red-800 font-semibold mb-2">⚠️ Por favor, corrija os seguintes campos:</p>
+                <ul class="list-disc list-inside text-red-700 text-sm">
+                    @if (isFieldInvalid('endereco')) {
+                        <li>Endereço</li>
+                    }
+                    @if (isFieldInvalid('valorAluguel')) {
+                        <li>Valor do Aluguel</li>
+                    }
+                    @if (isFieldInvalid('valorCondominio')) {
+                        <li>Valor do Condomínio</li>
+                    }
+                    @if (isFieldInvalid('valorIptu')) {
+                        <li>Valor do IPTU</li>
+                    }
+                    @if (isFieldInvalid('valorCaucao')) {
+                        <li>Valor do Caução</li>
+                    }
+                    @if (!dataInicioContrato && imovelForm.get('dataInicioContrato')?.touched) {
+                        <li>Data de Início do Contrato</li>
+                    }
+                </ul>
+            </div>
+        }
+        <form [formGroup]="imovelForm" (ngSubmit)="onSubmit()">
+            <div class="grid grid-cols-5 gap-4">
+                <!-- Endereço -->
+                <div class="col-span-5">
+                    <label for="endereco" class="block mb-2 text-sm font-medium">Endereço *</label>
+                    <input 
+                        pInputText 
+                        id="endereco" 
+                        formControlName="endereco" 
+                        class="w-full"
+                        [class.ng-invalid]="imovelForm.get('endereco')?.invalid && imovelForm.get('endereco')?.touched"
+                        placeholder="Ex: Rua das Flores, 123, Apt 45"
+                    />
+                    @if (isFieldInvalid('endereco')) {
+                        <small class="p-error">{{ getFieldError('endereco') }}</small>
+                    }
+                </div>
+
+                <!-- Valor do Aluguel -->
+                <div class="col-span-1">
+                    <label for="valorAluguel" class="block mb-2 text-sm font-medium">Valor do Aluguel *</label>
+                    <p-inputNumber 
+                        id="valorAluguel" 
+                        formControlName="valorAluguel" 
+                        mode="currency" 
+                        currency="BRL" 
+                        locale="pt-BR" 
+                        [style]="{ width: '100%' }"
+                        [class.ng-invalid]="imovelForm.get('valorAluguel')?.invalid && imovelForm.get('valorAluguel')?.touched"
+                    />
+                    @if (isFieldInvalid('valorAluguel')) {
+                        <small class="p-error">{{ getFieldError('valorAluguel') }}</small>
+                    }
+                </div>
+
+                <!-- Valor do Condomínio -->
+                <div class="col-span-1">
+                    <label for="valorCondominio" class="block mb-2 text-sm font-medium">Valor do Condomínio *</label>
+                    <p-inputNumber 
+                        id="valorCondominio" 
+                        formControlName="valorCondominio" 
+                        mode="currency" 
+                        currency="BRL" 
+                        locale="pt-BR" 
+                        [style]="{ width: '100%' }"
+                        [class.ng-invalid]="imovelForm.get('valorCondominio')?.invalid && imovelForm.get('valorCondominio')?.touched"
+                    />
+                    @if (isFieldInvalid('valorCondominio')) {
+                        <small class="p-error">{{ getFieldError('valorCondominio') }}</small>
+                    }
+                </div>
+
+                <!-- Valor do IPTU -->
+                <div class="col-span-1">
+                    <label for="valorIptu" class="block mb-2 text-sm font-medium">Valor do IPTU *</label>
+                    <p-inputNumber 
+                        id="valorIptu" 
+                        formControlName="valorIptu" 
+                        mode="currency" 
+                        currency="BRL" 
+                        locale="pt-BR" 
+                        [style]="{ width: '100%' }"
+                        [class.ng-invalid]="imovelForm.get('valorIptu')?.invalid && imovelForm.get('valorIptu')?.touched"
+                    />
+                    @if (isFieldInvalid('valorIptu')) {
+                        <small class="p-error">{{ getFieldError('valorIptu') }}</small>
+                    }
+                </div>
+
+                <!-- Valor do Caução -->
+                <div class="col-span-1">
+                    <label for="valorCaucao" class="block mb-2 text-sm font-medium">Valor do Caução *</label>
+                    <p-inputNumber 
+                        id="valorCaucao" 
+                        formControlName="valorCaucao" 
+                        mode="currency" 
+                        currency="BRL" 
+                        locale="pt-BR" 
+                        [style]="{ width: '100%' }"
+                        [class.ng-invalid]="imovelForm.get('valorCaucao')?.invalid && imovelForm.get('valorCaucao')?.touched"
+                    />
+                    @if (isFieldInvalid('valorCaucao')) {
+                        <small class="p-error">{{ getFieldError('valorCaucao') }}</small>
+                    }
+                </div>
+
+                <!-- Data de Início do Contrato -->
+                <div class="col-span-1">
+                    <label for="dataInicioContrato" class="block mb-2 text-sm font-medium">Data de Início do Contrato *</label>
+                    <p-datepicker
+                        [(ngModel)]="dataInicioContrato"
+                        [ngModelOptions]="{standalone: true}"
+                        dateFormat="dd/mm/yy" 
+                        [style]="{ width: '100%' }"
+                        [showIcon]="true"
+                        (onSelect)="onDateSelect($event)"
+                        [class.ng-invalid]="(!dataInicioContrato && imovelForm.get('dataInicioContrato')?.touched) || isFieldInvalid('dataInicioContrato')"
+                    />
+                    @if ((!dataInicioContrato && imovelForm.get('dataInicioContrato')?.touched) || isFieldInvalid('dataInicioContrato')) {
+                        <small class="p-error">Data de início é obrigatória</small>
+                    }
+                </div>
+
+                <!-- Arquivo do Contrato -->
+                <div class="col-span-5">
+                    <label for="arquivoContrato" class="block mb-2 text-sm font-medium">Arquivo do Contrato (PDF)</label>
+                    <input 
+                        type="file" 
+                        id="arquivoContrato" 
+                        accept=".pdf"
+                        (change)="onFileSelected($event)"
+                        class="w-full"
+                    />
+                    @if (arquivoContrato) {
+                        <small class="text-gray-600 mt-1 block">Arquivo selecionado: {{ arquivoContrato.name }}</small>
+                    }
+                </div>
+            </div>
+
+            <div class="flex gap-2 mt-4">
+                <p-button type="submit" label="Criar Imóvel" icon="pi pi-plus" />
+                <p-button 
+                    type="button" 
+                    label="Cancelar" 
+                    icon="pi pi-times" 
+                    severity="secondary" 
+                    [outlined]="true"
+                    (onClick)="router.navigate(['/home/alugueis'])"
+                />
+            </div>
+        </form>
+    </p-card>
+</div>

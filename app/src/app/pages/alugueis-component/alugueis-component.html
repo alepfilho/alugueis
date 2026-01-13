@@ -13,7 +13,11 @@
             </ng-template>
             <ng-template #body let-imovel>
                 <tr>
-                    <td><a routerLink="/home/detalhes-imovel" class="underline">{{imovel.inquilino}}</a></td>
+                    <td>
+                        <a [routerLink]="['/home/detalhes-imovel', imovel.id]" class="underline">
+                            {{imovel.inquilino !== 'Sem inquilino' ? imovel.inquilino : imovel.endereco}}
+                        </a>
+                    </td>
                     <td>{{imovel.valor_aluguel |  currency: 'BRL' }}</td>
                     <td>{{imovel.data_inicio}}</td>
                     <td>

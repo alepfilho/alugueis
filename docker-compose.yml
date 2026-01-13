@@ -1,12 +1,4 @@
 services:
-  site-angular:
-    build: .
-    restart: unless-stopped
-    networks:
-      - internal-aluguel
-    depends_on:
-      - postgres
-  
   postgres:
     image: postgres:15-alpine
     restart: unless-stopped

@@ -1,13 +1,36 @@
+<p-toast></p-toast>
 <div class="bg-gray-100">
     <div class="flex flex-col items-start h-screen">
         <div class="w-[30vw] bg-white h-full p-10 flex flex-col justify-center">
             <h1 class="text-4xl font-bold text-blue-600 mb-4">Login</h1>
             <form (ngSubmit)="onSubmit()">
                 <div class="mb-4">
-                    <app-input inputId="email" inputName="email" inputType="email" labelName="E-mail" [autocomplete]="true" />
+                    <p-floatlabel>
+                        <input 
+                            id="email" 
+                            name="email" 
+                            type="email" 
+                            pInputText 
+                            [(ngModel)]="email"
+                            autocomplete="email"
+                            class="w-full" 
+                        />
+                        <label for="email">E-mail</label>
+                    </p-floatlabel>
                 </div>
                 <div class="mb-4">
-                    <app-input inputId="password" inputName="password" inputType="password" labelName="Senha" [autocomplete]="true" />
+                    <p-floatlabel>
+                        <input 
+                            id="password" 
+                            name="password" 
+                            type="password" 
+                            pInputText 
+                            [(ngModel)]="password"
+                            autocomplete="current-password"
+                            class="w-full" 
+                        />
+                        <label for="password">Senha</label>
+                    </p-floatlabel>
                 </div>
                 <div class="mt-4">
                     <button type="submit"

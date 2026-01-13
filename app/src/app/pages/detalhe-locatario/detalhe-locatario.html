@@ -13,27 +13,28 @@
             }
         </div>
         
-        @if (!editandoLocatario) {
-            <!-- Modo Visualização -->
-            <div class="grid grid-cols-2 gap-5">
-                <div class="col-span-1">
-                    <p class="text-sm text-gray-600 mb-1">Nome</p>
-                    <p class="text-lg font-semibold">{{ locatario.nome }}</p>
+        @if (locatario) {
+            @if (!editandoLocatario) {
+                <!-- Modo Visualização -->
+                <div class="grid grid-cols-2 gap-5">
+                    <div class="col-span-1">
+                        <p class="text-sm text-gray-600 mb-1">Nome</p>
+                        <p class="text-lg font-semibold">{{ locatario.nome }}</p>
+                    </div>
+                    <div class="col-span-1">
+                        <p class="text-sm text-gray-600 mb-1">Telefone</p>
+                        <p class="text-lg">{{ locatario.telefone }}</p>
+                    </div>
+                    <div class="col-span-1">
+                        <p class="text-sm text-gray-600 mb-1">E-mail</p>
+                        <p class="text-lg">{{ locatario.email }}</p>
+                    </div>
+                    <div class="col-span-1">
+                        <p class="text-sm text-gray-600 mb-1">Imóvel</p>
+                        <p class="text-lg">{{ selectedImovel?.endereco || 'Não informado' }}</p>
+                    </div>
                 </div>
-                <div class="col-span-1">
-                    <p class="text-sm text-gray-600 mb-1">Telefone</p>
-                    <p class="text-lg">{{ locatario.telefone }}</p>
-                </div>
-                <div class="col-span-1">
-                    <p class="text-sm text-gray-600 mb-1">E-mail</p>
-                    <p class="text-lg">{{ locatario.email }}</p>
-                </div>
-                <div class="col-span-1">
-                    <p class="text-sm text-gray-600 mb-1">Imóvel</p>
-                    <p class="text-lg">{{ selectedImovel?.endereco || 'Não informado' }}</p>
-                </div>
-            </div>
-        } @else {
+            } @else {
             <!-- Modo Edição -->
             <form [formGroup]="locatarioForm" (ngSubmit)="salvarEdicaoLocatario()">
                 <div class="grid grid-cols-2 gap-5 mb-4">
@@ -55,11 +56,10 @@
                     <!-- Telefone -->
                     <div class="col-span-1">
                         <label for="telefone" class="block mb-2 text-sm font-medium">Telefone</label>
-                        <p-inputNumber 
+                        <input 
+                            pInputText 
                             id="telefone" 
                             formControlName="telefone" 
-                            [useGrouping]="false"
-                            inputId="telefone"
                             class="w-full"
                             [class.ng-invalid]="locatarioForm.get('telefone')?.invalid && locatarioForm.get('telefone')?.touched"
                         />
@@ -111,6 +111,9 @@
                     </div>
                 </div>
             </form>
+            }
+        } @else {
+            <p>Carregando dados do locatário...</p>
         }
     </p-card>
 </div>

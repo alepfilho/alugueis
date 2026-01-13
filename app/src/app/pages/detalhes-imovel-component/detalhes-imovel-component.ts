@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -19,6 +20,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
 
 import { GeminiService } from '../../services/gemini-service';
+import { ImovelService, IImovel } from '../../services/imovel-service';
 
 
 
@@ -96,7 +98,22 @@ interface IHistoricoContrato {
 export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   @ViewChild('chatMessages') chatMessagesElement!: ElementRef;
   
-  imovel!: IDetalhesImovel;
+  imovel: IDetalhesImovel = {
+    id: 0,
+    endereco: '',
+    valorCondominio: 0,
+    valorAluguel: 0,
+    valorIptu: 0,
+    valorCaucao: 0,
+    dataInicioContrato: '',
+    arquivoContrato: '',
+    inquilino: {
+      nome: 'Sem inquilino',
+      telefone: '',
+      email: ''
+    },
+    historicoPagamentos: []
+  };
   items: MenuItem[] = [];
   displayDialogPagamento: boolean = false;
   editandoImovel: boolean = false;
@@ -141,7 +158,9 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   constructor(
     private messageService: MessageService,
     private geminiService: GeminiService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    private imovelService: ImovelService
   ) {}
 
   ngOnInit(): void {
@@ -164,78 +183,21 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
         }
       }
     ];
-    // Dados mockados - substituir por chamada de serviço
-    this.imovel = {
-      id: 1,
-      endereco: 'Rua Galvão Bueno, 485 - Ap 91',
-      valorCondominio: 350.00,
-      valorAluguel: 1700.80,
-      valorIptu: 180.50,
-      valorCaucao: 3401.60,
-      dataInicioContrato: '2026-01-10',
-      arquivoContrato: '/assets/contratos/contrato-001.pdf',
-      inquilino: {
-        nome: 'Alexandre P Filho',
-        telefone: '(11) 98765-4321',
-        email: 'alexandre@email.com'
-      },
-      historicoPagamentos: [
-        {
-          id: 1,
-          tipo: 'aluguel',
-          valor: 1700.80,
-          dataVencimento: '2026-01-05',
-          dataPagamento: '2026-01-03',
-          status: 'pago',
-          mesReferencia: 'Janeiro/2026'
-        },
-        {
-          id: 2,
-          tipo: 'iptu',
-          valor: 180.50,
-          dataVencimento: '2026-01-10',
-          dataPagamento: null,
-          status: 'atrasado',
-          mesReferencia: 'Janeiro/2026'
-        },
-        {
-          id: 3,
-          tipo: 'condominio',
-          valor: 350.00,
-          dataVencimento: '2026-01-05',
-          dataPagamento: '2026-01-02',
-          status: 'pago',
-          mesReferencia: 'Janeiro/2026'
-        },
-        {
-          id: 4,
-          tipo: 'aluguel',
-          valor: 1700.80,
-          dataVencimento: '2026-02-05',
-          dataPagamento: '2026-02-01',
-          status: 'pago',
-          mesReferencia: 'Fevereiro/2026'
-        },
-        {
-          id: 5,
-          tipo: 'iptu',
-          valor: 180.50,
-          dataVencimento: '2026-02-10',
-          dataPagamento: '2026-02-08',
-          status: 'pago',
-          mesReferencia: 'Fevereiro/2026'
-        },
-        {
-          id: 6,
-          tipo: 'condominio',
-          valor: 350.00,
-          dataVencimento: '2026-02-05',
-          dataPagamento: '2026-02-03',
-          status: 'pago',
-          mesReferencia: 'Fevereiro/2026'
-        }
-      ]
-    };
+
+    // Obter o ID da rota
+    const id = this.route.snapshot.paramMap.get('id');
+    
+    if (id) {
+      const imovelId = parseInt(id, 10);
+      this.loadImovel(imovelId);
+    } else {
+      // Se não houver ID, mostrar mensagem de erro
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Erro',
+        detail: 'ID do imóvel não fornecido'
+      });
+    }
 
     // Inicializar histórico de contratos (mockado - substituir por chamada de serviço)
     this.historicoContratos = [
@@ -261,6 +223,47 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
         tamanhoArquivo: 312456
       }
     ];
+  }
+
+  loadImovel(id: number): void {
+    this.imovelService.getImovelById(id).subscribe({
+      next: (imovelApi: IImovel) => {
+        this.imovel = this.mapImovelToDetalhes(imovelApi);
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Erro ao carregar imóvel:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Erro',
+          detail: 'Erro ao carregar dados do imóvel'
+        });
+      }
+    });
+  }
+
+  private mapImovelToDetalhes(imovelApi: IImovel): IDetalhesImovel {
+    // Formatar data de início do contrato
+    const dataInicio = imovelApi.dataInicioContrato 
+      ? new Date(imovelApi.dataInicioContrato).toISOString().split('T')[0]
+      : '';
+
+    return {
+      id: imovelApi.id || 0,
+      endereco: imovelApi.endereco,
+      valorCondominio: imovelApi.valorCondominio,
+      valorAluguel: imovelApi.valorAluguel,
+      valorIptu: imovelApi.valorIptu,
+      valorCaucao: imovelApi.valorCaucao,
+      dataInicioContrato: dataInicio,
+      arquivoContrato: imovelApi.arquivoContrato || '',
+      inquilino: {
+        nome: 'Sem inquilino', // Valor padrão, pois não vem da API
+        telefone: '',
+        email: ''
+      },
+      historicoPagamentos: [] // Valor padrão, pois não vem da API
+    };
   }
 
   getTipoPagamentoLabel(tipo: string): string {
@@ -528,13 +531,15 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       return `${dia}/${mes}/${ano}`;
     };
     
+    const nomeInquilino = this.imovel?.inquilino?.nome || 'Sem inquilino';
+    
     return `
-      Imóvel: ${this.imovel.endereco}
-      Aluguel: ${formatarMoeda(this.imovel.valorAluguel)}
-      Condomínio: ${formatarMoeda(this.imovel.valorCondominio)}
-      IPTU: ${formatarMoeda(this.imovel.valorIptu)}
-      Inquilino: ${this.imovel.inquilino.nome}
-      Data de Início do Contrato: ${formatarData(this.imovel.dataInicioContrato)}
+      Imóvel: ${this.imovel?.endereco || 'N/A'}
+      Aluguel: ${formatarMoeda(this.imovel?.valorAluguel || 0)}
+      Condomínio: ${formatarMoeda(this.imovel?.valorCondominio || 0)}
+      IPTU: ${formatarMoeda(this.imovel?.valorIptu || 0)}
+      Inquilino: ${nomeInquilino}
+      Data de Início do Contrato: ${this.imovel?.dataInicioContrato ? formatarData(this.imovel.dataInicioContrato) : 'N/A'}
     `;
   }
 
@@ -698,21 +703,36 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       return `${dia}/${mes}/${ano}`;
     };
     
+    if (!this.imovel) {
+      return 'Dados do imóvel não disponíveis.';
+    }
+    
     if (mensagemLower.includes('aluguel') || mensagemLower.includes('valor')) {
       return `O valor do aluguel deste imóvel é ${formatarMoeda(this.imovel.valorAluguel)}. Além disso, há o condomínio de ${formatarMoeda(this.imovel.valorCondominio)} e o IPTU de ${formatarMoeda(this.imovel.valorIptu)}.`;
     }
     
     if (mensagemLower.includes('inquilino') || mensagemLower.includes('locatário')) {
-      return `O inquilino deste imóvel é ${this.imovel.inquilino.nome}. Você pode entrar em contato pelo telefone ${this.imovel.inquilino.telefone} ou email ${this.imovel.inquilino.email}.`;
+      const nomeInquilino = this.imovel.inquilino?.nome || 'Sem inquilino';
+      const telefone = this.imovel.inquilino?.telefone || 'Não informado';
+      const email = this.imovel.inquilino?.email || 'Não informado';
+      
+      if (nomeInquilino === 'Sem inquilino') {
+        return `Este imóvel não possui inquilino cadastrado no momento.`;
+      }
+      
+      return `O inquilino deste imóvel é ${nomeInquilino}. Você pode entrar em contato pelo telefone ${telefone} ou email ${email}.`;
     }
     
     if (mensagemLower.includes('pagamento') || mensagemLower.includes('pago')) {
-      const pagamentosPendentes = this.imovel.historicoPagamentos.filter(p => p.status !== 'pago').length;
+      const pagamentosPendentes = this.imovel.historicoPagamentos?.filter(p => p.status !== 'pago').length || 0;
       return `Atualmente há ${pagamentosPendentes} pagamento(s) pendente(s) no histórico. Você pode visualizar todos os detalhes na tabela acima.`;
     }
     
     if (mensagemLower.includes('contrato')) {
-      return `O contrato deste imóvel teve início em ${formatarData(this.imovel.dataInicioContrato)}. Você pode baixar o PDF do contrato clicando no botão "Baixar Contrato PDF" acima.`;
+      const dataInicio = this.imovel.dataInicioContrato 
+        ? formatarData(this.imovel.dataInicioContrato)
+        : 'Não informada';
+      return `O contrato deste imóvel teve início em ${dataInicio}. Você pode baixar o PDF do contrato clicando no botão "Baixar Contrato PDF" acima.`;
     }
     
     return 'Obrigado pela sua mensagem! Em breve, esta funcionalidade estará totalmente integrada com o Gemini AI para fornecer respostas mais precisas e detalhadas.';
