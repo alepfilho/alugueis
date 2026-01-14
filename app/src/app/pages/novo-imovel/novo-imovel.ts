@@ -8,7 +8,10 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
+import { SelectModule } from 'primeng/select';
 import { ImovelService } from '../../services/imovel-service';
+import { LocatarioService } from '../../services/locatario-service';
+import { ILocatario } from '../../Interfaces/Ilocatario';
 
 @Component({
   selector: 'app-novo-imovel',
@@ -21,7 +24,8 @@ import { ImovelService } from '../../services/imovel-service';
     InputNumberModule,
     ButtonModule,
     DatePickerModule,
-    FileUploadModule
+    FileUploadModule,
+    SelectModule
   ],
   templateUrl: './novo-imovel.html',
   styleUrl: './novo-imovel.css',
@@ -30,10 +34,12 @@ export class NovoImovel implements OnInit {
   imovelForm!: FormGroup;
   dataInicioContrato: Date | null = null;
   arquivoContrato: File | null = null;
+  locatarios: ILocatario[] = [];
 
   constructor(
     private fb: FormBuilder,
     private imovelService: ImovelService,
+    private locatarioService: LocatarioService,
     public router: Router
   ) {}
 
@@ -45,12 +51,27 @@ export class NovoImovel implements OnInit {
       valorIptu: [null, [Validators.required]],
       valorCaucao: [null, [Validators.required]],
       dataInicioContrato: [null, [Validators.required]],
+      locatarioId: [null, [Validators.required]],
       arquivoContrato: ['']
     });
 
     // Sincronizar dataInicioContrato com o FormGroup
     this.imovelForm.get('dataInicioContrato')?.valueChanges.subscribe(value => {
       this.dataInicioContrato = value;
+    });
+
+    // Carregar lista de locatários
+    this.carregarLocatarios();
+  }
+
+  carregarLocatarios(): void {
+    this.locatarioService.getLocatarios().subscribe({
+      next: (locatarios) => {
+        this.locatarios = locatarios;
+      },
+      error: (error) => {
+        console.error('Erro ao carregar locatários:', error);
+      }
     });
   }
 
@@ -116,7 +137,8 @@ export class NovoImovel implements OnInit {
       'valorCondominio': 'Valor do Condomínio',
       'valorIptu': 'Valor do IPTU',
       'valorCaucao': 'Valor do Caução',
-      'dataInicioContrato': 'Data de Início do Contrato'
+      'dataInicioContrato': 'Data de Início do Contrato',
+      'locatarioId': 'Locatário'
     };
     return labels[fieldName] || fieldName;
   }
@@ -158,6 +180,7 @@ export class NovoImovel implements OnInit {
       if (this.imovelForm.get('valorIptu')?.invalid) camposComErro.push('Valor do IPTU');
       if (this.imovelForm.get('valorCaucao')?.invalid) camposComErro.push('Valor do Caução');
       if (!this.dataInicioContrato || this.imovelForm.get('dataInicioContrato')?.invalid) camposComErro.push('Data de Início do Contrato');
+      if (this.imovelForm.get('locatarioId')?.invalid) camposComErro.push('Locatário');
       
       if (camposComErro.length > 0) {
         alert(`Por favor, preencha corretamente os seguintes campos:\n${camposComErro.join('\n')}`);
@@ -170,6 +193,9 @@ export class NovoImovel implements OnInit {
     // Converter data para formato ISO
     const dataInicioContratoISO = this.formatarData(this.dataInicioContrato);
 
+    // Extrair ID do locatário (p-select com optionValue retorna apenas o ID)
+    const locatarioId: number | null = formValue.locatarioId || null;
+
     const novoImovel = {
       endereco: formValue.endereco,
       valorAluguel: formValue.valorAluguel,
@@ -177,6 +203,7 @@ export class NovoImovel implements OnInit {
       valorIptu: formValue.valorIptu,
       valorCaucao: formValue.valorCaucao,
       dataInicioContrato: dataInicioContratoISO,
+      locatarioId: locatarioId,
       arquivoContrato: formValue.arquivoContrato || ''
     };
 

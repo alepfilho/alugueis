@@ -22,16 +22,16 @@ type Imovel struct {
 	ValorAluguel       float64   `json:"valorAluguel"`
 	ValorIptu          float64   `json:"valorIptu"`
 	ValorCaucao        float64   `json:"valorCaucao"`
-	DataInicioContrato time.Time `json:"dataInicioContrato"`
+	DataInicioContrato time.Time `json:"dataInicioContrato" gorm:"type:date"`
 	ArquivoContrato    string    `json:"arquivoContrato"`
-	
+
 	// Relacionamentos
-	Inquilino           *Inquilino           `gorm:"foreignKey:ImovelID" json:"inquilino,omitempty"`
-	HistoricoPagamentos []Pagamento          `gorm:"foreignKey:ImovelID" json:"historicoPagamentos,omitempty"`
-	HistoricoValores    []HistoricoValor     `gorm:"foreignKey:ImovelID" json:"historicoValores,omitempty"`
-	
-	CreatedAt           time.Time            `json:"created_at"`
-	UpdatedAt           time.Time            `json:"updated_at"`
+	Inquilino           *Inquilino       `gorm:"foreignKey:ImovelID" json:"inquilino,omitempty"`
+	HistoricoPagamentos []Pagamento      `gorm:"foreignKey:ImovelID" json:"historicoPagamentos,omitempty"`
+	HistoricoValores    []HistoricoValor `gorm:"foreignKey:ImovelID" json:"historicoValores,omitempty"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Inquilino reflete ILocatario

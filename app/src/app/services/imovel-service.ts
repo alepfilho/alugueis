@@ -20,7 +20,7 @@ export interface IImovel {
   providedIn: 'root',
 })
 export class ImovelService {
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   createImovel(imovel: Partial<IImovel>): Observable<IImovel> {
     return this.http.post<IImovel>(`${API_CONFIG.baseUrl}/imoveis`, imovel)
@@ -42,6 +42,15 @@ export class ImovelService {
 
   getImovelById(id: number): Observable<IImovel> {
     return this.http.get<IImovel>(`${API_CONFIG.baseUrl}/imoveis/${id}`)
+      .pipe(
+        catchError(error => {
+          return throwError(() => error);
+        })
+      );
+  }
+
+  updateImovel(id: number, imovel: Partial<IImovel>): Observable<IImovel> {
+    return this.http.put<IImovel>(`${API_CONFIG.baseUrl}/imoveis/${id}`, imovel)
       .pipe(
         catchError(error => {
           return throwError(() => error);

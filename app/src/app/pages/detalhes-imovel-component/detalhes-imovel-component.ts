@@ -97,7 +97,7 @@ interface IHistoricoContrato {
 })
 export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   @ViewChild('chatMessages') chatMessagesElement!: ElementRef;
-  
+
   imovel: IDetalhesImovel = {
     id: 0,
     endereco: '',
@@ -122,13 +122,13 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   displayDialogHistoricoContratos: boolean = false;
   historicoContratos: IHistoricoContrato[] = [];
   novoArquivoContrato: File | null = null;
-  
+
   // Chat
   mensagens: IMensagemChat[] = [];
   novaMensagem: string = '';
   enviandoMensagem: boolean = false;
   private proximoIdMensagem: number = 1;
-  
+
   // Formulário de pagamento
   novoPagamento: {
     tipo: 'aluguel' | 'iptu' | 'condominio' | null;
@@ -136,11 +136,11 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     valor: number | null;
     status: 'pendente' | 'atrasado' | 'pago' | null;
   } = {
-    tipo: null,
-    dataVencimento: null,
-    valor: null,
-    status: null
-  };
+      tipo: null,
+      dataVencimento: null,
+      valor: null,
+      status: null
+    };
 
   // Opções para dropdowns
   tiposPagamento = [
@@ -161,12 +161,12 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
     private imovelService: ImovelService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Configurar API Key do Gemini (opcional - pode ser feito via variável de ambiente)
     this.geminiService.setApiKey('AIzaSyAxpz6UE6nG9MXt3mB0mda3OcC_xM0Yl9U');
-    
+
     this.items = [
       {
         label: 'Adicionar Pagamento',
@@ -186,7 +186,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
     // Obter o ID da rota
     const id = this.route.snapshot.paramMap.get('id');
-    
+
     if (id) {
       const imovelId = parseInt(id, 10);
       this.loadImovel(imovelId);
@@ -244,7 +244,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
   private mapImovelToDetalhes(imovelApi: IImovel): IDetalhesImovel {
     // Formatar data de início do contrato
-    const dataInicio = imovelApi.dataInicioContrato 
+    const dataInicio = imovelApi.dataInicioContrato
       ? new Date(imovelApi.dataInicioContrato).toISOString().split('T')[0]
       : '';
 
@@ -304,8 +304,8 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   }
 
   salvarPagamento(): void {
-    if (!this.novoPagamento.tipo || !this.novoPagamento.dataVencimento || 
-        !this.novoPagamento.valor || !this.novoPagamento.status) {
+    if (!this.novoPagamento.tipo || !this.novoPagamento.dataVencimento ||
+      !this.novoPagamento.valor || !this.novoPagamento.status) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Atenção',
@@ -317,7 +317,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     // Formatar data (vem como string do input type="date")
     const dataVencimento = new Date(this.novoPagamento.dataVencimento + 'T00:00:00');
     const mesReferencia = this.formatarMesReferencia(dataVencimento);
-    
+
     // Criar novo pagamento
     const novoId = Math.max(...this.imovel.historicoPagamentos.map(p => p.id)) + 1;
     const novoPagamento: IPagamento = {
@@ -332,7 +332,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
     // Adicionar à lista
     this.imovel.historicoPagamentos.push(novoPagamento);
-    
+
     // Fechar dialog e mostrar mensagem
     this.displayDialogPagamento = false;
     this.messageService.add({
@@ -439,7 +439,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
         // Se não estiver configurado, usar resposta simulada
         await new Promise(resolve => setTimeout(resolve, 1000));
         const respostaGemini = this.gerarRespostaSimulada(mensagemUsuario);
-        
+
         const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
         if (index !== -1) {
           this.mensagens[index] = {
@@ -456,10 +456,10 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
       // Obter contexto do imóvel
       const contexto = this.obterContextoImovel();
-      
+
       // Enviar mensagem para o Gemini
       const respostaGemini = await this.geminiService.enviarMensagem(mensagemUsuario, contexto);
-      
+
       console.log('Resposta recebida do Gemini:', respostaGemini);
       console.log('Tipo da resposta:', typeof respostaGemini);
       console.log('Tamanho da resposta:', respostaGemini?.length);
@@ -467,7 +467,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       // Atualizar mensagem de carregamento com a resposta
       const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
       console.log('Índice da mensagem encontrado:', index);
-      
+
       if (index !== -1) {
         const mensagemAtualizada = {
           id: idMensagemCarregando,
@@ -476,26 +476,26 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
           hora: new Date(),
           carregando: false
         };
-        
+
         console.log('Atualizando mensagem:', mensagemAtualizada);
         this.mensagens[index] = mensagemAtualizada;
-        
+
         // Forçar detecção de mudanças
         this.mensagens = [...this.mensagens];
         this.cdr.detectChanges();
-        
+
         console.log('Mensagens após atualização:', this.mensagens);
       } else {
         console.error('Mensagem de carregamento não encontrada com ID:', idMensagemCarregando);
       }
     } catch (error) {
       console.error('Erro ao processar mensagem com Gemini:', error);
-      
+
       // Atualizar mensagem de erro
       const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
       if (index !== -1) {
         let mensagemErro = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.';
-        
+
         if (error instanceof Error) {
           if (error.message.includes('API Key')) {
             mensagemErro = '⚠️ API Key do Gemini não configurada. Configure a chave da API para usar o assistente.';
@@ -503,7 +503,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
             mensagemErro = '⚠️ Erro de conexão. Verifique sua internet e tente novamente.';
           }
         }
-        
+
         this.mensagens[index] = {
           id: idMensagemCarregando,
           texto: mensagemErro,
@@ -522,7 +522,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     const formatarMoeda = (valor: number): string => {
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
     };
-    
+
     const formatarData = (data: string): string => {
       const date = new Date(data);
       const dia = String(date.getDate()).padStart(2, '0');
@@ -530,9 +530,9 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       const ano = date.getFullYear();
       return `${dia}/${mes}/${ano}`;
     };
-    
+
     const nomeInquilino = this.imovel?.inquilino?.nome || 'Sem inquilino';
-    
+
     return `
       Imóvel: ${this.imovel?.endereco || 'N/A'}
       Aluguel: ${formatarMoeda(this.imovel?.valorAluguel || 0)}
@@ -570,29 +570,94 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   }
 
   salvarEdicaoImovel(): void {
-    // Converter Date object de volta para string
+    // 1. Tratamento da Data - formatar para ISO string
+    let dataInicioContratoFormatada = '';
     if (this.dataInicioContratoEditada) {
-      this.imovelEditado.dataInicioContrato = this.formatarData(this.dataInicioContratoEditada);
+      // Formatar como ISO string (YYYY-MM-DDTHH:MM:SSZ)
+      const dataFormatada = this.formatarData(this.dataInicioContratoEditada);
+      dataInicioContratoFormatada = `${dataFormatada}T00:00:00Z`;
+    } else if (this.imovelEditado.dataInicioContrato) {
+      // Se não houver data editada, usar a data original
+      dataInicioContratoFormatada = this.imovelEditado.dataInicioContrato;
     }
-    
-    // Processar upload de novo arquivo de contrato se houver
+
+    // 2. Simulação de Upload (mantive sua lógica)
     if (this.novoArquivoContrato) {
       this.processarUploadContrato();
     }
-    
-    // Atualizar dados do imóvel
-    this.imovel = {
-      ...this.imovelEditado,
-      inquilino: { ...this.imovelEditado.inquilino }
+
+    // 3. Preparar o objeto para envio - APENAS campos do imóvel (sem relacionamentos)
+    const payloadEnvio: Partial<IImovel> = {
+      endereco: this.imovelEditado.endereco || '',
+      valorAluguel: this.imovelEditado.valorAluguel || 0,
+      valorCondominio: this.imovelEditado.valorCondominio || 0,
+      valorIptu: this.imovelEditado.valorIptu || 0,
+      valorCaucao: this.imovelEditado.valorCaucao || 0,
+      dataInicioContrato: dataInicioContratoFormatada,
+      arquivoContrato: this.imovelEditado.arquivoContrato || ''
     };
-    this.editandoImovel = false;
-    this.dataInicioContratoEditada = null;
-    this.novoArquivoContrato = null;
-    
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Sucesso',
-      detail: 'Dados do imóvel atualizados com sucesso!'
+
+    // 4. CHAMADA AO SERVIÇO
+    this.imovelService.updateImovel(this.imovelEditado.id, payloadEnvio).subscribe({
+      next: (imovelAtualizado) => {
+        // Sucesso: Atualizamos a variável local com o que voltou do banco
+        this.imovel = this.mapImovelToDetalhes(imovelAtualizado);
+
+        this.editandoImovel = false;
+        this.dataInicioContratoEditada = null;
+        this.novoArquivoContrato = null;
+
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Sucesso',
+          detail: 'Dados salvos no banco de dados!'
+        });
+
+        // Força a atualização da tela se necessário
+        this.cdr.detectChanges();
+      },
+      error: (erro) => {
+        console.error('Erro ao salvar:', erro);
+        
+        // Extrair informações de erro da resposta
+        let mensagemErro = 'Falha ao salvar as alterações no servidor.';
+        let camposInvalidos: string[] = [];
+        let detalhes: any = {};
+
+        if (erro.error) {
+          if (erro.error.camposInvalidos && Array.isArray(erro.error.camposInvalidos)) {
+            camposInvalidos = erro.error.camposInvalidos;
+          }
+          if (erro.error.detalhes) {
+            detalhes = erro.error.detalhes;
+          }
+          if (erro.error.message) {
+            mensagemErro = erro.error.message;
+          }
+        }
+
+        // Construir mensagem detalhada
+        let mensagemDetalhada = mensagemErro;
+        if (camposInvalidos.length > 0) {
+          const camposTexto = camposInvalidos.join(', ');
+          mensagemDetalhada += `\n\nCampos com erro: ${camposTexto}`;
+          
+          // Adicionar detalhes específicos se disponíveis
+          if (Object.keys(detalhes).length > 0) {
+            const detalhesTexto = Object.entries(detalhes)
+              .map(([campo, msg]) => `• ${campo}: ${msg}`)
+              .join('\n');
+            mensagemDetalhada += `\n\nDetalhes:\n${detalhesTexto}`;
+          }
+        }
+
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Erro ao salvar',
+          detail: mensagemDetalhada,
+          life: 10000 // Mostrar por 10 segundos para dar tempo de ler
+        });
+      }
     });
   }
 
@@ -601,10 +666,10 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
     // Aqui você faria o upload real do arquivo para o servidor
     // Por enquanto, vamos simular adicionando ao histórico
-    const novoId = this.historicoContratos.length > 0 
-      ? Math.max(...this.historicoContratos.map(c => c.id)) + 1 
+    const novoId = this.historicoContratos.length > 0
+      ? Math.max(...this.historicoContratos.map(c => c.id)) + 1
       : 1;
-    
+
     const novoContrato: IHistoricoContrato = {
       id: novoId,
       nomeArquivo: this.novoArquivoContrato.name,
@@ -615,7 +680,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
     // Adicionar ao início do histórico (mais recente primeiro)
     this.historicoContratos.unshift(novoContrato);
-    
+
     // Atualizar o arquivo atual do imóvel
     this.imovelEditado.arquivoContrato = novoContrato.caminhoArquivo;
 
@@ -638,7 +703,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
         });
         return;
       }
-      
+
       // Validar tamanho (máximo 10MB)
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
@@ -690,11 +755,11 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
   private gerarRespostaSimulada(mensagem: string): string {
     const mensagemLower = mensagem.toLowerCase();
-    
+
     const formatarMoeda = (valor: number): string => {
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
     };
-    
+
     const formatarData = (data: string): string => {
       const date = new Date(data);
       const dia = String(date.getDate()).padStart(2, '0');
@@ -702,39 +767,39 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       const ano = date.getFullYear();
       return `${dia}/${mes}/${ano}`;
     };
-    
+
     if (!this.imovel) {
       return 'Dados do imóvel não disponíveis.';
     }
-    
+
     if (mensagemLower.includes('aluguel') || mensagemLower.includes('valor')) {
       return `O valor do aluguel deste imóvel é ${formatarMoeda(this.imovel.valorAluguel)}. Além disso, há o condomínio de ${formatarMoeda(this.imovel.valorCondominio)} e o IPTU de ${formatarMoeda(this.imovel.valorIptu)}.`;
     }
-    
+
     if (mensagemLower.includes('inquilino') || mensagemLower.includes('locatário')) {
       const nomeInquilino = this.imovel.inquilino?.nome || 'Sem inquilino';
       const telefone = this.imovel.inquilino?.telefone || 'Não informado';
       const email = this.imovel.inquilino?.email || 'Não informado';
-      
+
       if (nomeInquilino === 'Sem inquilino') {
         return `Este imóvel não possui inquilino cadastrado no momento.`;
       }
-      
+
       return `O inquilino deste imóvel é ${nomeInquilino}. Você pode entrar em contato pelo telefone ${telefone} ou email ${email}.`;
     }
-    
+
     if (mensagemLower.includes('pagamento') || mensagemLower.includes('pago')) {
       const pagamentosPendentes = this.imovel.historicoPagamentos?.filter(p => p.status !== 'pago').length || 0;
       return `Atualmente há ${pagamentosPendentes} pagamento(s) pendente(s) no histórico. Você pode visualizar todos os detalhes na tabela acima.`;
     }
-    
+
     if (mensagemLower.includes('contrato')) {
-      const dataInicio = this.imovel.dataInicioContrato 
+      const dataInicio = this.imovel.dataInicioContrato
         ? formatarData(this.imovel.dataInicioContrato)
         : 'Não informada';
       return `O contrato deste imóvel teve início em ${dataInicio}. Você pode baixar o PDF do contrato clicando no botão "Baixar Contrato PDF" acima.`;
     }
-    
+
     return 'Obrigado pela sua mensagem! Em breve, esta funcionalidade estará totalmente integrada com o Gemini AI para fornecer respostas mais precisas e detalhadas.';
   }
 }

@@ -18,8 +18,9 @@ export class AlugueisComponent implements OnInit {
   imoveis: IAlugueis[] = [];
 
   constructor(
-    private imovelService: ImovelService
-  ) {}
+    private imovelService: ImovelService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
     this.loadImoveis();
@@ -28,9 +29,10 @@ export class AlugueisComponent implements OnInit {
   loadImoveis(): void {
     this.imovelService.getAllImoveis().subscribe({
       next: (imoveis: IImovel[]) => {
-        setTimeout(() => {
-          this.imoveis = imoveis.map(imovel => this.mapImovelToAlugueis(imovel));
-        }, 0);
+        this.imoveis = imoveis.map(imovel => this.mapImovelToAlugueis(imovel));
+
+        // 3. Forçamos o Angular a detectar a mudança imediatamente
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Erro ao carregar imóveis:', error);
@@ -39,7 +41,7 @@ export class AlugueisComponent implements OnInit {
   }
 
   private mapImovelToAlugueis(imovel: IImovel): IAlugueis {
-    const dataInicio = imovel.dataInicioContrato 
+    const dataInicio = imovel.dataInicioContrato
       ? new Date(imovel.dataInicioContrato).toLocaleDateString('pt-BR')
       : '';
 
