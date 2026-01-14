@@ -24,9 +24,10 @@ type Imovel struct {
 	ValorCaucao        float64   `json:"valorCaucao"`
 	DataInicioContrato time.Time `json:"dataInicioContrato" gorm:"type:date"`
 	ArquivoContrato    string    `json:"arquivoContrato"`
+	InquilinoID        *uint     `json:"inquilino_id" gorm:"column:inquilino_id"`
 
 	// Relacionamentos
-	Inquilino           *Inquilino       `gorm:"foreignKey:ImovelID" json:"inquilino,omitempty"`
+	Inquilino           *Inquilino       `gorm:"foreignKey:InquilinoID" json:"inquilino,omitempty"`
 	HistoricoPagamentos []Pagamento      `gorm:"foreignKey:ImovelID" json:"historicoPagamentos,omitempty"`
 	HistoricoValores    []HistoricoValor `gorm:"foreignKey:ImovelID" json:"historicoValores,omitempty"`
 
@@ -66,12 +67,17 @@ type HistoricoContrato struct {
 	DataInsercao   time.Time `json:"dataInsercao"`
 }
 
-// Pagamento (Inferido)
+// Pagamento representa um pagamento de aluguel, IPTU ou condomínio
 type Pagamento struct {
-	ID            uint      `gorm:"primaryKey" json:"id"`
-	ImovelID      uint      `json:"imovelId"`
-	InquilinoID   uint      `json:"inquilinoId"`
-	Valor         float64   `json:"valor"`
-	DataPagamento time.Time `json:"dataPagamento"`
-	Status        string    `json:"status"`
+	ID             uint       `gorm:"primaryKey" json:"id"`
+	ImovelID       uint       `json:"imovelId"`
+	InquilinoID    uint       `json:"inquilinoId"`
+	Tipo           string     `json:"tipo"` // "aluguel", "iptu", "condominio"
+	Valor          float64    `json:"valor"`
+	DataVencimento time.Time  `json:"dataVencimento" gorm:"type:date"`
+	DataPagamento  *time.Time `json:"dataPagamento,omitempty" gorm:"type:date"` // Nullable
+	Status         string     `json:"status"`                                   // "pendente", "atrasado", "pago"
+	MesReferencia  string     `json:"mesReferencia"`                            // Ex: "Janeiro/2024"
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }

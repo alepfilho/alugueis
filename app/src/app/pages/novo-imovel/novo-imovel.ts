@@ -203,14 +203,13 @@ export class NovoImovel implements OnInit {
       valorIptu: formValue.valorIptu,
       valorCaucao: formValue.valorCaucao,
       dataInicioContrato: dataInicioContratoISO,
-      locatarioId: locatarioId,
-      arquivoContrato: formValue.arquivoContrato || ''
+      inquilino_id: locatarioId
     };
 
     console.log('Dados que serão enviados:', novoImovel);
 
-    // Criar imóvel na API
-    this.imovelService.createImovel(novoImovel).subscribe({
+    // Criar imóvel na API (passa o arquivo se houver)
+    this.imovelService.createImovel(novoImovel, this.arquivoContrato || undefined).subscribe({
       next: (data) => {
         console.log('Imóvel criado com sucesso:', data);
         // Redirecionar para a lista de aluguéis ou para os detalhes do novo imóvel

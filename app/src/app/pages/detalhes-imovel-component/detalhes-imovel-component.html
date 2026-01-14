@@ -61,8 +61,9 @@
     </ng-template>
 </p-dialog>
 
-<!-- Dialog para Adicionar Pagamento -->
-<p-dialog [(visible)]="displayDialogPagamento" [modal]="true" [style]="{ width: '50rem' }" header="Adicionar Pagamento"
+<!-- Dialog para Adicionar/Editar Pagamento -->
+<p-dialog [(visible)]="displayDialogPagamento" [modal]="true" [style]="{ width: '50rem' }" 
+    [header]="editandoPagamento ? 'Editar Pagamento' : 'Adicionar Pagamento'"
     [draggable]="false" [resizable]="false">
     <div class="grid grid-cols-2 gap-4">
         <div class="col-span-1">
@@ -260,6 +261,7 @@
                     <th>Vencimento</th>
                     <th>Pagamento</th>
                     <th>Status</th>
+                    <th>Ações</th>
                 </tr>
             </ng-template>
             <ng-template #body let-pagamento>
@@ -285,6 +287,24 @@
                         } @else {
                         <p-tag severity="warn" value="Pendente" />
                         }
+                    </td>
+                    <td>
+                        <p-button 
+                            icon="pi pi-pencil" 
+                            (onClick)="editarPagamento(pagamento)"
+                            severity="secondary" 
+                            [outlined]="true"
+                            [size]="'small'"
+                            [rounded]="true"
+                            title="Editar pagamento">
+                        </p-button>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <p class="text-gray-500">Nenhum pagamento registrado</p>
                     </td>
                 </tr>
             </ng-template>

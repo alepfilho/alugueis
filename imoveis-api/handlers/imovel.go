@@ -2,75 +2,260 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"imoveis-api/database"
 	"imoveis-api/models"
+	"io"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 // CriarImovel - Adiciona um novo imóvel
 func CriarImovel(c *fiber.Ctx) error {
-	// Primeiro, faz parse do body para um map para extrair locatarioId
-	body := make(map[string]interface{})
-	if err := json.Unmarshal(c.Body(), &body); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Dados inválidos"})
+	// Verifica o Content-Type para determinar se é multipart/form-data ou JSON
+	contentType := c.Get("Content-Type")
+	isMultipart := len(contentType) > 0 && len(contentType) >= 19 && contentType[:19] == "multipart/form-data"
+
+	// Processa o arquivo PDF se fornecido (apenas em multipart)
+	// Salva temporariamente para mover depois que tivermos os IDs
+	var arquivoTemporario string
+	var nomeArquivoOriginal string
+	if isMultipart {
+		file, err := c.FormFile("arquivoContrato")
+		if err == nil && file != nil {
+			// Valida se é PDF
+			if filepath.Ext(file.Filename) != ".pdf" {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "O arquivo deve ser um PDF"})
+			}
+
+			// Cria diretório temporário se não existir
+			tempDir := "assets/temp"
+			if err := os.MkdirAll(tempDir, os.ModePerm); err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao criar diretório temporário"})
+			}
+
+			// Gera nome único temporário para o arquivo
+			timestamp := time.Now().Unix()
+			nomeArquivoOriginal = file.Filename
+			nomeTemp := fmt.Sprintf("%d_%s", timestamp, file.Filename)
+			arquivoTemporario = filepath.Join(tempDir, nomeTemp)
+
+			// Salva o arquivo temporariamente
+			if err := c.SaveFile(file, arquivoTemporario); err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao salvar arquivo temporário"})
+			}
+		}
 	}
 
-	// Extrai locatarioId se presente
-	var locatarioId interface{}
+	var imovel models.Imovel
 	var locatarioIdUint *uint
-	if locId, ok := body["locatarioId"]; ok && locId != nil {
-		locatarioId = locId
-		// Remove do body para não interferir no parse do Imovel
-		delete(body, "locatarioId")
-	}
 
-	// Converte locatarioId para uint se presente
-	if locatarioId != nil {
-		var locIdUint uint
+	if isMultipart {
+		// Processa dados do multipart/form-data
+		endereco := c.FormValue("endereco")
+		valorAluguelStr := c.FormValue("valorAluguel")
+		valorCondominioStr := c.FormValue("valorCondominio")
+		valorIptuStr := c.FormValue("valorIptu")
+		valorCaucaoStr := c.FormValue("valorCaucao")
+		dataInicioContratoStr := c.FormValue("dataInicioContrato")
+		locatarioIdStr := c.FormValue("locatarioId")
 
-		// Tenta converter de float64 (JSON numbers são float64 por padrão)
-		if locIdFloat, ok := locatarioId.(float64); ok {
-			if locIdFloat < 0 {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "locatarioId deve ser um número positivo"})
+		// Converte valores numéricos
+		var valorAluguel, valorCondominio, valorIptu, valorCaucao float64
+		fmt.Sscanf(valorAluguelStr, "%f", &valorAluguel)
+		fmt.Sscanf(valorCondominioStr, "%f", &valorCondominio)
+		fmt.Sscanf(valorIptuStr, "%f", &valorIptu)
+		fmt.Sscanf(valorCaucaoStr, "%f", &valorCaucao)
+
+		// Converte data
+		dataInicioContrato, err := time.Parse("2006-01-02T15:04:05Z", dataInicioContratoStr)
+		if err != nil {
+			// Tenta outro formato
+			dataInicioContrato, err = time.Parse("2006-01-02", dataInicioContratoStr)
+			if err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Formato de data inválido"})
 			}
-			locIdUint = uint(locIdFloat)
-		} else if locIdInt, ok := locatarioId.(int); ok {
-			if locIdInt < 0 {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "locatarioId deve ser um número positivo"})
-			}
-			locIdUint = uint(locIdInt)
-		} else {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "locatarioId deve ser um número"})
 		}
 
-		locatarioIdUint = &locIdUint
+		// Converte locatarioId
+		if locatarioIdStr != "" {
+			var locIdUint uint
+			fmt.Sscanf(locatarioIdStr, "%d", &locIdUint)
+			if locIdUint > 0 {
+				locatarioIdUint = &locIdUint
+			}
+		}
+
+		imovel = models.Imovel{
+			Endereco:           endereco,
+			ValorAluguel:       valorAluguel,
+			ValorCondominio:    valorCondominio,
+			ValorIptu:          valorIptu,
+			ValorCaucao:        valorCaucao,
+			DataInicioContrato: dataInicioContrato,
+			ArquivoContrato:    "", // Será preenchido depois com o caminho correto
+		}
+	} else {
+		// Tenta parsear como JSON
+		body := make(map[string]interface{})
+		if err := json.Unmarshal(c.Body(), &body); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Dados inválidos"})
+		}
+
+		// Extrai locatarioId se presente
+		var locatarioId interface{}
+		if locId, ok := body["locatarioId"]; ok && locId != nil {
+			locatarioId = locId
+			delete(body, "locatarioId")
+		}
+
+		// Converte locatarioId para uint se presente
+		if locatarioId != nil {
+			var locIdUint uint
+			if locIdFloat, ok := locatarioId.(float64); ok {
+				if locIdFloat < 0 {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "locatarioId deve ser um número positivo"})
+				}
+				locIdUint = uint(locIdFloat)
+			} else if locIdInt, ok := locatarioId.(int); ok {
+				if locIdInt < 0 {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "locatarioId deve ser um número positivo"})
+				}
+				locIdUint = uint(locIdInt)
+			} else {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "locatarioId deve ser um número"})
+			}
+			locatarioIdUint = &locIdUint
+		}
+
+		// Faz parse do body (sem locatarioId) para o modelo Imovel
+		bodyBytes, _ := json.Marshal(body)
+		if err := json.Unmarshal(bodyBytes, &imovel); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Dados inválidos"})
+		}
+
+		// Se arquivo foi enviado via JSON (string), mantém como está
+		// O caminho já está no campo ArquivoContrato do JSON
 	}
 
-	// Faz parse do body (sem locatarioId) para o modelo Imovel
-	bodyBytes, _ := json.Marshal(body)
-	imovel := new(models.Imovel)
-	if err := json.Unmarshal(bodyBytes, imovel); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Dados inválidos"})
-	}
-
-	// Cria o imóvel
-	if result := database.DB.Create(&imovel); result.Error != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao criar imóvel"})
-	}
-
-	// Se foi fornecido um locatarioId, associa o inquilino ao imóvel
+	// Se foi fornecido um locatarioId, valida e seta o InquilinoID antes de criar
 	if locatarioIdUint != nil {
 		var inquilino models.Inquilino
 		if result := database.DB.First(&inquilino, *locatarioIdUint); result.Error != nil {
-			// Se o inquilino não for encontrado, não falha a criação do imóvel, apenas loga
-			// Mas podemos retornar erro se preferir
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Inquilino não encontrado"})
+		}
+		// Seta o InquilinoID no imóvel antes de criar
+		imovel.InquilinoID = locatarioIdUint
+	}
+
+	// Cria o imóvel (já com InquilinoID se fornecido)
+	if result := database.DB.Create(&imovel); result.Error != nil {
+		// Se falhar, remove arquivo temporário se existir
+		if arquivoTemporario != "" {
+			os.Remove(arquivoTemporario)
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao criar imóvel"})
+	}
+
+	// Se foi fornecido um locatarioId, atualiza o ImovelID do inquilino
+	if locatarioIdUint != nil {
+		var inquilino models.Inquilino
+		if result := database.DB.First(&inquilino, *locatarioIdUint); result.Error != nil {
+			// Se falhar, remove arquivo temporário se existir
+			if arquivoTemporario != "" {
+				os.Remove(arquivoTemporario)
+			}
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao buscar inquilino após criação"})
 		}
 		// Atualiza o ImovelID do inquilino
 		inquilino.ImovelID = &imovel.ID
 		if result := database.DB.Save(&inquilino); result.Error != nil {
+			// Se falhar, remove arquivo temporário se existir
+			if arquivoTemporario != "" {
+				os.Remove(arquivoTemporario)
+			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao associar inquilino ao imóvel"})
+		}
+	}
+
+	// Se há arquivo temporário, move para a estrutura correta
+	if arquivoTemporario != "" {
+		// Determina o ID do inquilino (pode ser nil se não houver)
+		inquilinoID := uint(0)
+		if imovel.InquilinoID != nil {
+			inquilinoID = *imovel.InquilinoID
+		}
+
+		// Cria a estrutura de pastas: assets/imoveis/{imovel_id}/{inquilino_id}/
+		uploadDir := fmt.Sprintf("assets/imoveis/%d/%d", imovel.ID, inquilinoID)
+		if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
+			// Se falhar ao criar diretório, remove arquivo temporário
+			os.Remove(arquivoTemporario)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao criar diretório de upload"})
+		}
+
+		// Define o caminho final do arquivo
+		caminhoFinal := filepath.Join(uploadDir, nomeArquivoOriginal)
+
+		// Move o arquivo do diretório temporário para o diretório final
+		srcFile, err := os.Open(arquivoTemporario)
+		if err != nil {
+			os.Remove(arquivoTemporario)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao abrir arquivo temporário"})
+		}
+		defer srcFile.Close()
+
+		dstFile, err := os.Create(caminhoFinal)
+		if err != nil {
+			srcFile.Close()
+			os.Remove(arquivoTemporario)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao criar arquivo final"})
+		}
+		defer dstFile.Close()
+
+		_, err = io.Copy(dstFile, srcFile)
+		if err != nil {
+			srcFile.Close()
+			dstFile.Close()
+			os.Remove(arquivoTemporario)
+			os.Remove(caminhoFinal)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao copiar arquivo"})
+		}
+
+		// Remove o arquivo temporário
+		os.Remove(arquivoTemporario)
+
+		// Obtém informações do arquivo para o histórico
+		fileInfo, err := os.Stat(caminhoFinal)
+		if err != nil {
+			os.Remove(caminhoFinal)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao obter informações do arquivo"})
+		}
+
+		// Atualiza o caminho do arquivo no banco de dados
+		imovel.ArquivoContrato = caminhoFinal
+		if result := database.DB.Save(&imovel); result.Error != nil {
+			// Se falhar ao salvar, remove o arquivo criado
+			os.Remove(caminhoFinal)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao atualizar caminho do arquivo"})
+		}
+
+		// Cria registro no histórico de contratos
+		historicoContrato := models.HistoricoContrato{
+			ImovelID:       imovel.ID,
+			NomeArquivo:    nomeArquivoOriginal,
+			CaminhoArquivo: caminhoFinal,
+			TamanhoArquivo: fileInfo.Size(),
+			DataInsercao:   time.Now(),
+		}
+
+		if result := database.DB.Create(&historicoContrato); result.Error != nil {
+			// Se falhar ao criar histórico, loga o erro mas não falha a criação do imóvel
+			// O arquivo já foi salvo e o imóvel já foi criado
+			fmt.Printf("Erro ao criar histórico de contrato: %v\n", result.Error)
 		}
 	}
 
@@ -268,6 +453,12 @@ func EditarImovel(c *fiber.Ctx) error {
 		})
 	}
 
+	// Salvar valores antigos antes de atualizar
+	valorAluguelAntigo := imovel.ValorAluguel
+	valorCondominioAntigo := imovel.ValorCondominio
+	valorIptuAntigo := imovel.ValorIptu
+	valorCaucaoAntigo := imovel.ValorCaucao
+
 	// Atualiza apenas os campos permitidos (exclui relacionamentos e campos de sistema)
 	// Omit exclui os relacionamentos e campos que não devem ser atualizados
 	if result := database.DB.Model(&imovel).Omit(
@@ -284,8 +475,354 @@ func EditarImovel(c *fiber.Ctx) error {
 		})
 	}
 
+	// Verificar alterações de valores e criar registros no histórico
+	// Verificamos se o campo foi enviado no body e se o valor mudou
+	historicoValores := []models.HistoricoValor{}
+	agora := time.Now()
+
+	// Verificar se valorAluguel foi enviado no body e se mudou
+	if _, ok := body["valorAluguel"]; ok {
+		valorNovoAluguel, _ := body["valorAluguel"].(float64)
+		if valorNovoAluguel != valorAluguelAntigo {
+			historicoValores = append(historicoValores, models.HistoricoValor{
+				ImovelID:        imovel.ID,
+				CampoAlterado:   "aluguel",
+				ValorAntigo:     valorAluguelAntigo,
+				ValorNovo:       valorNovoAluguel,
+				MotivoAlteracao: "Alteração de valor do aluguel",
+				DataAlteracao:   agora,
+			})
+		}
+	}
+
+	// Verificar se valorCondominio foi enviado no body e se mudou
+	if _, ok := body["valorCondominio"]; ok {
+		valorNovoCondominio, _ := body["valorCondominio"].(float64)
+		if valorNovoCondominio != valorCondominioAntigo {
+			historicoValores = append(historicoValores, models.HistoricoValor{
+				ImovelID:        imovel.ID,
+				CampoAlterado:   "condominio",
+				ValorAntigo:     valorCondominioAntigo,
+				ValorNovo:       valorNovoCondominio,
+				MotivoAlteracao: "Alteração de valor do condomínio",
+				DataAlteracao:   agora,
+			})
+		}
+	}
+
+	// Verificar se valorIptu foi enviado no body e se mudou
+	if _, ok := body["valorIptu"]; ok {
+		valorNovoIptu, _ := body["valorIptu"].(float64)
+		if valorNovoIptu != valorIptuAntigo {
+			historicoValores = append(historicoValores, models.HistoricoValor{
+				ImovelID:        imovel.ID,
+				CampoAlterado:   "iptu",
+				ValorAntigo:     valorIptuAntigo,
+				ValorNovo:       valorNovoIptu,
+				MotivoAlteracao: "Alteração de valor do IPTU",
+				DataAlteracao:   agora,
+			})
+		}
+	}
+
+	// Verificar se valorCaucao foi enviado no body e se mudou
+	if _, ok := body["valorCaucao"]; ok {
+		valorNovoCaucao, _ := body["valorCaucao"].(float64)
+		if valorNovoCaucao != valorCaucaoAntigo {
+			historicoValores = append(historicoValores, models.HistoricoValor{
+				ImovelID:        imovel.ID,
+				CampoAlterado:   "caucao",
+				ValorAntigo:     valorCaucaoAntigo,
+				ValorNovo:       valorNovoCaucao,
+				MotivoAlteracao: "Alteração de valor da caução",
+				DataAlteracao:   agora,
+			})
+		}
+	}
+
+	// Criar registros no histórico se houver alterações
+	if len(historicoValores) > 0 {
+		for _, historico := range historicoValores {
+			if result := database.DB.Create(&historico); result.Error != nil {
+				// Log do erro mas não falha a atualização do imóvel
+				fmt.Printf("Erro ao criar histórico de valor: %v\n", result.Error)
+			}
+		}
+	}
+
 	// Recarrega o imóvel atualizado
 	database.DB.First(&imovel, id)
 
 	return c.JSON(imovel)
+}
+
+// BaixarContratoMaisRecente - Retorna o contrato mais recente de um imóvel para download
+func BaixarContratoMaisRecente(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID inválido"})
+	}
+
+	// Busca o contrato mais recente do imóvel
+	var historicoContrato models.HistoricoContrato
+	result := database.DB.
+		Where("imovel_id = ?", id).
+		Order("data_insercao DESC").
+		First(&historicoContrato)
+
+	if result.Error != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Nenhum contrato encontrado para este imóvel"})
+	}
+
+	// Verifica se o arquivo existe
+	if _, err := os.Stat(historicoContrato.CaminhoArquivo); os.IsNotExist(err) {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Arquivo não encontrado no servidor"})
+	}
+
+	// Retorna o arquivo para download
+	return c.Download(historicoContrato.CaminhoArquivo, historicoContrato.NomeArquivo)
+}
+
+// ListarContratos - Retorna todos os contratos de um imóvel
+func ListarContratos(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID inválido"})
+	}
+
+	// Busca todos os contratos do imóvel ordenados por data de inserção (mais recente primeiro)
+	var historicoContratos []models.HistoricoContrato
+	result := database.DB.
+		Where("imovel_id = ?", id).
+		Order("data_insercao DESC").
+		Find(&historicoContratos)
+
+	if result.Error != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao buscar contratos"})
+	}
+
+	// Se não houver contratos, retorna array vazio
+	if len(historicoContratos) == 0 {
+		return c.JSON([]models.HistoricoContrato{})
+	}
+
+	return c.JSON(historicoContratos)
+}
+
+// BaixarContratoPorId - Retorna um contrato específico por ID para download
+func BaixarContratoPorId(c *fiber.Ctx) error {
+	imovelId, err := c.ParamsInt("imovelId")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID do imóvel inválido"})
+	}
+
+	contratoId, err := c.ParamsInt("contratoId")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID do contrato inválido"})
+	}
+
+	// Busca o contrato específico
+	var historicoContrato models.HistoricoContrato
+	result := database.DB.
+		Where("id = ? AND imovel_id = ?", contratoId, imovelId).
+		First(&historicoContrato)
+
+	if result.Error != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Contrato não encontrado"})
+	}
+
+	// Verifica se o arquivo existe
+	if _, err := os.Stat(historicoContrato.CaminhoArquivo); os.IsNotExist(err) {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Arquivo não encontrado no servidor"})
+	}
+
+	// Retorna o arquivo para download
+	return c.Download(historicoContrato.CaminhoArquivo, historicoContrato.NomeArquivo)
+}
+
+// CriarPagamento - Cria um novo pagamento para um imóvel
+func CriarPagamento(c *fiber.Ctx) error {
+	imovelId, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID do imóvel inválido"})
+	}
+
+	// Verifica se o imóvel existe
+	var imovel models.Imovel
+	if result := database.DB.First(&imovel, imovelId); result.Error != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Imóvel não encontrado"})
+	}
+
+	// Verifica se o imóvel tem inquilino
+	if imovel.InquilinoID == nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Imóvel não possui inquilino cadastrado"})
+	}
+
+	// Parse do body JSON
+	var pagamentoData struct {
+		Tipo           string  `json:"tipo"`
+		Valor          float64 `json:"valor"`
+		DataVencimento string  `json:"dataVencimento"`
+		Status         string  `json:"status"`
+		MesReferencia  string  `json:"mesReferencia"`
+	}
+
+	if err := c.BodyParser(&pagamentoData); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Dados inválidos: " + err.Error()})
+	}
+
+	// Validações
+	if pagamentoData.Tipo == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tipo de pagamento é obrigatório"})
+	}
+	if pagamentoData.Tipo != "aluguel" && pagamentoData.Tipo != "iptu" && pagamentoData.Tipo != "condominio" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tipo de pagamento inválido. Deve ser: aluguel, iptu ou condominio"})
+	}
+	if pagamentoData.Valor <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Valor deve ser maior que zero"})
+	}
+	if pagamentoData.Status == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Status é obrigatório"})
+	}
+	if pagamentoData.Status != "pendente" && pagamentoData.Status != "atrasado" && pagamentoData.Status != "pago" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Status inválido. Deve ser: pendente, atrasado ou pago"})
+	}
+	if pagamentoData.DataVencimento == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Data de vencimento é obrigatória"})
+	}
+
+	// Parse da data de vencimento
+	dataVencimento, err := time.Parse("2006-01-02", pagamentoData.DataVencimento)
+	if err != nil {
+		// Tenta outro formato
+		dataVencimento, err = time.Parse("2006-01-02T15:04:05Z", pagamentoData.DataVencimento)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Formato de data inválido. Use YYYY-MM-DD"})
+		}
+	}
+
+	// Cria o pagamento
+	pagamento := models.Pagamento{
+		ImovelID:       uint(imovelId),
+		InquilinoID:    *imovel.InquilinoID,
+		Tipo:           pagamentoData.Tipo,
+		Valor:          pagamentoData.Valor,
+		DataVencimento: dataVencimento,
+		Status:         pagamentoData.Status,
+		MesReferencia:  pagamentoData.MesReferencia,
+	}
+
+	// Se o status for "pago", define a data de pagamento como hoje
+	if pagamentoData.Status == "pago" {
+		agora := time.Now()
+		pagamento.DataPagamento = &agora
+	}
+
+	// Salva no banco
+	if result := database.DB.Create(&pagamento); result.Error != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao criar pagamento: " + result.Error.Error()})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(pagamento)
+}
+
+// AtualizarPagamento - Atualiza um pagamento existente
+func AtualizarPagamento(c *fiber.Ctx) error {
+	imovelId, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID do imóvel inválido"})
+	}
+
+	pagamentoId, err := c.ParamsInt("pagamentoId")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID do pagamento inválido"})
+	}
+
+	// Verifica se o pagamento existe e pertence ao imóvel
+	var pagamento models.Pagamento
+	result := database.DB.Where("id = ? AND imovel_id = ?", pagamentoId, imovelId).First(&pagamento)
+	if result.Error != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Pagamento não encontrado"})
+	}
+
+	// Parse do body JSON
+	var pagamentoData struct {
+		Tipo           string  `json:"tipo"`
+		Valor          float64 `json:"valor"`
+		DataVencimento string  `json:"dataVencimento"`
+		Status         string  `json:"status"`
+		MesReferencia  string  `json:"mesReferencia"`
+		DataPagamento  *string `json:"dataPagamento"` // Opcional, pode ser null
+	}
+
+	if err := c.BodyParser(&pagamentoData); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Dados inválidos: " + err.Error()})
+	}
+
+	// Validações
+	if pagamentoData.Tipo == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tipo de pagamento é obrigatório"})
+	}
+	if pagamentoData.Tipo != "aluguel" && pagamentoData.Tipo != "iptu" && pagamentoData.Tipo != "condominio" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Tipo de pagamento inválido. Deve ser: aluguel, iptu ou condominio"})
+	}
+	if pagamentoData.Valor <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Valor deve ser maior que zero"})
+	}
+	if pagamentoData.Status == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Status é obrigatório"})
+	}
+	if pagamentoData.Status != "pendente" && pagamentoData.Status != "atrasado" && pagamentoData.Status != "pago" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Status inválido. Deve ser: pendente, atrasado ou pago"})
+	}
+	if pagamentoData.DataVencimento == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Data de vencimento é obrigatória"})
+	}
+
+	// Parse da data de vencimento
+	dataVencimento, err := time.Parse("2006-01-02", pagamentoData.DataVencimento)
+	if err != nil {
+		// Tenta outro formato
+		dataVencimento, err = time.Parse("2006-01-02T15:04:05Z", pagamentoData.DataVencimento)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Formato de data inválido. Use YYYY-MM-DD"})
+		}
+	}
+
+	// Atualiza os campos do pagamento
+	pagamento.Tipo = pagamentoData.Tipo
+	pagamento.Valor = pagamentoData.Valor
+	pagamento.DataVencimento = dataVencimento
+	pagamento.Status = pagamentoData.Status
+	pagamento.MesReferencia = pagamentoData.MesReferencia
+
+	// Trata dataPagamento
+	if pagamentoData.DataPagamento != nil && *pagamentoData.DataPagamento != "" {
+		// Se foi enviada uma data de pagamento, faz parse
+		dataPagamento, err := time.Parse("2006-01-02", *pagamentoData.DataPagamento)
+		if err != nil {
+			// Tenta outro formato
+			dataPagamento, err = time.Parse("2006-01-02T15:04:05Z", *pagamentoData.DataPagamento)
+			if err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Formato de data de pagamento inválido. Use YYYY-MM-DD"})
+			}
+		}
+		pagamento.DataPagamento = &dataPagamento
+	} else {
+		// Se status for "pago" mas não tiver dataPagamento, define como hoje
+		if pagamentoData.Status == "pago" && pagamento.DataPagamento == nil {
+			agora := time.Now()
+			pagamento.DataPagamento = &agora
+		} else if pagamentoData.Status != "pago" {
+			// Se status não for "pago", remove a data de pagamento
+			pagamento.DataPagamento = nil
+		}
+	}
+
+	// Salva as alterações
+	if result := database.DB.Save(&pagamento); result.Error != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao atualizar pagamento: " + result.Error.Error()})
+	}
+
+	return c.JSON(pagamento)
 }

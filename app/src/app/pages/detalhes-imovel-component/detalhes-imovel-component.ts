@@ -20,25 +20,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
 
 import { GeminiService } from '../../services/gemini-service';
-import { ImovelService, IImovel } from '../../services/imovel-service';
-
-
-
-interface IInquilino {
-  nome: string;
-  telefone: string;
-  email: string;
-}
-
-interface IPagamento {
-  id: number;
-  tipo: 'aluguel' | 'iptu' | 'condominio';
-  valor: number;
-  dataVencimento: string;
-  dataPagamento: string | null;
-  status: 'pendente' | 'atrasado' | 'pago';
-  mesReferencia: string;
-}
+import { ImovelService, IImovel, IInquilino, IHistoricoContrato, IPagamento } from '../../services/imovel-service';
 
 interface IDetalhesImovel {
   id: number;
@@ -61,13 +43,6 @@ interface IMensagemChat {
   carregando?: boolean;
 }
 
-interface IHistoricoContrato {
-  id: number;
-  nomeArquivo: string;
-  caminhoArquivo: string;
-  dataInserção: string;
-  tamanhoArquivo?: number;
-}
 
 @Component({
   selector: 'app-detalhes-imovel-component',
@@ -108,6 +83,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     dataInicioContrato: '',
     arquivoContrato: '',
     inquilino: {
+      id: undefined,
       nome: 'Sem inquilino',
       telefone: '',
       email: ''
@@ -116,6 +92,8 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   };
   items: MenuItem[] = [];
   displayDialogPagamento: boolean = false;
+  editandoPagamento: boolean = false;
+  pagamentoEditandoId: number | null = null;
   editandoImovel: boolean = false;
   imovelEditado: IDetalhesImovel = {} as IDetalhesImovel;
   dataInicioContratoEditada: Date | null = null;
@@ -131,10 +109,10 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
   // Formulário de pagamento
   novoPagamento: {
-    tipo: 'aluguel' | 'iptu' | 'condominio' | null;
-    dataVencimento: string | null;
+    tipo: 'aluguel' | 'iptu' | 'condominio' | { label: string; value: 'aluguel' | 'iptu' | 'condominio' } | null;
+    dataVencimento: Date | null;
     valor: number | null;
-    status: 'pendente' | 'atrasado' | 'pago' | null;
+    status: 'pendente' | 'atrasado' | 'pago' | { label: string; value: 'pendente' | 'atrasado' | 'pago' } | null;
   } = {
       tipo: null,
       dataVencimento: null,
@@ -199,30 +177,6 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       });
     }
 
-    // Inicializar histórico de contratos (mockado - substituir por chamada de serviço)
-    this.historicoContratos = [
-      {
-        id: 1,
-        nomeArquivo: 'contrato-001.pdf',
-        caminhoArquivo: '/assets/contratos/contrato-001.pdf',
-        dataInserção: '2026-01-10T00:00:00',
-        tamanhoArquivo: 245678
-      },
-      {
-        id: 2,
-        nomeArquivo: 'contrato-renovacao-001.pdf',
-        caminhoArquivo: '/assets/contratos/contrato-renovacao-001.pdf',
-        dataInserção: '2025-12-15T00:00:00',
-        tamanhoArquivo: 198432
-      },
-      {
-        id: 3,
-        nomeArquivo: 'contrato-inicial.pdf',
-        caminhoArquivo: '/assets/contratos/contrato-inicial.pdf',
-        dataInserção: '2025-01-10T00:00:00',
-        tamanhoArquivo: 312456
-      }
-    ];
   }
 
   loadImovel(id: number): void {
@@ -248,6 +202,73 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       ? new Date(imovelApi.dataInicioContrato).toISOString().split('T')[0]
       : '';
 
+    // Mapear inquilino se existir
+    let inquilino: IInquilino = {
+      id: undefined,
+      nome: 'Sem inquilino',
+      telefone: '',
+      email: ''
+    };
+
+    if (imovelApi.inquilino) {
+      inquilino = {
+        id: imovelApi.inquilino.id,
+        nome: imovelApi.inquilino.nome || 'Sem inquilino',
+        telefone: imovelApi.inquilino.telefone || '',
+        email: imovelApi.inquilino.email || ''
+      };
+    }
+
+    // Mapear pagamentos se existirem
+    let pagamentos: IPagamento[] = [];
+    if (imovelApi.historicoPagamentos && Array.isArray(imovelApi.historicoPagamentos)) {
+      pagamentos = imovelApi.historicoPagamentos.map((pag: any) => {
+        // Formatar dataVencimento
+        let dataVencimentoFormatada = '';
+        if (pag.dataVencimento) {
+          try {
+            // Se já vier como string, usa direto; se for objeto Date, formata
+            if (typeof pag.dataVencimento === 'string') {
+              dataVencimentoFormatada = pag.dataVencimento.split('T')[0]; // Remove hora se houver
+            } else {
+              dataVencimentoFormatada = new Date(pag.dataVencimento).toISOString().split('T')[0];
+            }
+          } catch (e) {
+            console.error('Erro ao formatar dataVencimento:', e);
+            dataVencimentoFormatada = '';
+          }
+        }
+
+        // Formatar dataPagamento (pode ser null)
+        let dataPagamentoFormatada: string | null = null;
+        if (pag.dataPagamento) {
+          try {
+            if (typeof pag.dataPagamento === 'string') {
+              dataPagamentoFormatada = pag.dataPagamento.split('T')[0];
+            } else {
+              dataPagamentoFormatada = new Date(pag.dataPagamento).toISOString().split('T')[0];
+            }
+          } catch (e) {
+            console.error('Erro ao formatar dataPagamento:', e);
+          }
+        }
+
+        return {
+          id: pag.id || 0,
+          tipo: pag.tipo || 'aluguel',
+          valor: pag.valor || 0,
+          dataVencimento: dataVencimentoFormatada,
+          dataPagamento: dataPagamentoFormatada,
+          status: pag.status || 'pendente',
+          mesReferencia: pag.mesReferencia || '',
+          imovelId: pag.imovelId || pag.imovel_id || 0,
+          inquilinoId: pag.inquilinoId || pag.inquilino_id || 0,
+          created_at: pag.created_at,
+          updated_at: pag.updated_at
+        } as IPagamento;
+      });
+    }
+
     return {
       id: imovelApi.id || 0,
       endereco: imovelApi.endereco,
@@ -257,12 +278,8 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       valorCaucao: imovelApi.valorCaucao,
       dataInicioContrato: dataInicio,
       arquivoContrato: imovelApi.arquivoContrato || '',
-      inquilino: {
-        nome: 'Sem inquilino', // Valor padrão, pois não vem da API
-        telefone: '',
-        email: ''
-      },
-      historicoPagamentos: [] // Valor padrão, pois não vem da API
+      inquilino: inquilino,
+      historicoPagamentos: pagamentos
     };
   }
 
@@ -276,24 +293,47 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   }
 
   downloadContrato(): void {
-    if (this.imovel?.arquivoContrato) {
-      // Se for uma URL completa, abre em nova aba
-      if (this.imovel.arquivoContrato.startsWith('http://') || this.imovel.arquivoContrato.startsWith('https://')) {
-        window.open(this.imovel.arquivoContrato, '_blank');
-      } else {
-        // Se for um caminho relativo, tenta fazer download
+    if (!this.imovel?.id) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Erro',
+        detail: 'ID do imóvel não encontrado'
+      });
+      return;
+    }
+
+    this.imovelService.downloadContrato(this.imovel.id).subscribe({
+      next: (blob: Blob) => {
+        // Cria um link temporário para download
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = this.imovel.arquivoContrato;
-        link.download = `contrato-${this.imovel.id}.pdf`;
-        link.target = '_blank';
+        link.href = url;
+        link.download = `contrato-imovel-${this.imovel.id}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Sucesso',
+          detail: 'Contrato baixado com sucesso!'
+        });
+      },
+      error: (error) => {
+        console.error('Erro ao baixar contrato:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Erro',
+          detail: error.error?.error || 'Erro ao baixar o contrato'
+        });
       }
-    }
+    });
   }
 
   adicionarPagamento(): void {
+    this.editandoPagamento = false;
+    this.pagamentoEditandoId = null;
     this.novoPagamento = {
       tipo: null,
       dataVencimento: null,
@@ -303,9 +343,42 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     this.displayDialogPagamento = true;
   }
 
+  editarPagamento(pagamento: IPagamento): void {
+    this.editandoPagamento = true;
+    this.pagamentoEditandoId = pagamento.id;
+
+    // Encontrar o objeto correspondente nas opções para o tipo
+    const tipoOption = this.tiposPagamento.find(opt => opt.value === pagamento.tipo);
+    
+    // Encontrar o objeto correspondente nas opções para o status
+    const statusOption = this.statusPagamento.find(opt => opt.value === pagamento.status);
+
+    // Converter dataVencimento de string para Date
+    const dataVencimentoDate = pagamento.dataVencimento ? new Date(pagamento.dataVencimento + 'T00:00:00') : null;
+
+    this.novoPagamento = {
+      tipo: (tipoOption ?? null) as 'aluguel' | 'iptu' | 'condominio' | { label: string; value: 'aluguel' | 'iptu' | 'condominio' } | null,
+      dataVencimento: dataVencimentoDate,
+      valor: pagamento.valor,
+      status: (statusOption ?? null) as 'pendente' | 'atrasado' | 'pago' | { label: string; value: 'pendente' | 'atrasado' | 'pago' } | null
+    };
+
+
+    this.displayDialogPagamento = true;
+  }
+
   salvarPagamento(): void {
-    if (!this.novoPagamento.tipo || !this.novoPagamento.dataVencimento ||
-      !this.novoPagamento.valor || !this.novoPagamento.status) {
+    // Verificar se os campos estão preenchidos (considerando que podem ser objetos do PrimeNG)
+    const tipoValido = this.novoPagamento.tipo !== null && 
+      (typeof this.novoPagamento.tipo === 'string' || 
+       (typeof this.novoPagamento.tipo === 'object' && this.novoPagamento.tipo.value));
+    
+    const statusValido = this.novoPagamento.status !== null && 
+      (typeof this.novoPagamento.status === 'string' || 
+       (typeof this.novoPagamento.status === 'object' && this.novoPagamento.status.value));
+
+    if (!tipoValido || !this.novoPagamento.dataVencimento ||
+      !this.novoPagamento.valor || !statusValido) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Atenção',
@@ -314,44 +387,100 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       return;
     }
 
-    // Formatar data (vem como string do input type="date")
-    const dataVencimento = new Date(this.novoPagamento.dataVencimento + 'T00:00:00');
-    const mesReferencia = this.formatarMesReferencia(dataVencimento);
+    if (!this.imovel?.id) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Erro',
+        detail: 'ID do imóvel não encontrado'
+      });
+      return;
+    }
 
-    // Criar novo pagamento
-    const novoId = Math.max(...this.imovel.historicoPagamentos.map(p => p.id)) + 1;
-    const novoPagamento: IPagamento = {
-      id: novoId,
-      tipo: this.novoPagamento.tipo,
-      valor: this.novoPagamento.valor,
-      dataVencimento: this.novoPagamento.dataVencimento,
-      dataPagamento: this.novoPagamento.status === 'pago' ? this.formatarData(new Date()) : null,
-      status: this.novoPagamento.status,
+    // Formatar data para string (YYYY-MM-DD)
+    const dataVencimento = this.formatarData(this.novoPagamento.dataVencimento!);
+    const mesReferencia = this.formatarMesReferencia(this.novoPagamento.dataVencimento!);
+
+    // Extrair valores dos objetos do PrimeNG (p-select retorna {label, value})
+    const tipoValue = typeof this.novoPagamento.tipo === 'object' && this.novoPagamento.tipo !== null
+      ? this.novoPagamento.tipo.value
+      : this.novoPagamento.tipo;
+
+    const statusValue = typeof this.novoPagamento.status === 'object' && this.novoPagamento.status !== null
+      ? this.novoPagamento.status.value
+      : this.novoPagamento.status;
+
+    // Preparar dados para envio (apenas valores, sem objetos)
+    const pagamentoData: any = {
+      tipo: tipoValue!,
+      valor: this.novoPagamento.valor!,
+      dataVencimento: dataVencimento,
+      status: statusValue!,
       mesReferencia: mesReferencia
     };
 
-    // Adicionar à lista
-    this.imovel.historicoPagamentos.push(novoPagamento);
+    // Se estiver editando, adicionar dataPagamento se existir
+    if (this.editandoPagamento && this.pagamentoEditandoId) {
+      // Buscar o pagamento original para manter a dataPagamento se não mudou o status
+      const pagamentoOriginal = this.imovel.historicoPagamentos.find(p => p.id === this.pagamentoEditandoId);
+      if (pagamentoOriginal?.dataPagamento && statusValue === 'pago') {
+        pagamentoData.dataPagamento = pagamentoOriginal.dataPagamento;
+      }
+    }
 
-    // Fechar dialog e mostrar mensagem
-    this.displayDialogPagamento = false;
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Sucesso',
-      detail: 'Pagamento adicionado com sucesso!'
+    // Chamar o serviço apropriado (criar ou atualizar)
+    const operacao = this.editandoPagamento && this.pagamentoEditandoId
+      ? this.imovelService.atualizarPagamento(this.imovel.id, this.pagamentoEditandoId, pagamentoData)
+      : this.imovelService.salvarPagamento(this.imovel.id, pagamentoData);
+
+    operacao.subscribe({
+      next: (pagamentoSalvo: IPagamento) => {
+        if (this.editandoPagamento && this.pagamentoEditandoId) {
+          // Atualizar na lista local
+          const index = this.imovel.historicoPagamentos.findIndex(p => p.id === this.pagamentoEditandoId);
+          if (index !== -1) {
+            this.imovel.historicoPagamentos[index] = pagamentoSalvo;
+          }
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Sucesso',
+            detail: 'Pagamento atualizado com sucesso!'
+          });
+        } else {
+          // Adicionar à lista local
+          this.imovel.historicoPagamentos.push(pagamentoSalvo);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Sucesso',
+            detail: 'Pagamento salvo com sucesso!'
+          });
+        }
+
+        // Fechar dialog e limpar formulário
+        this.displayDialogPagamento = false;
+        this.editandoPagamento = false;
+        this.pagamentoEditandoId = null;
+        this.novoPagamento = {
+          tipo: null,
+          dataVencimento: null,
+          valor: null,
+          status: null
+        };
+      },
+      error: (error) => {
+        console.error('Erro ao salvar pagamento:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Erro',
+          detail: error.error?.error || 'Erro ao salvar pagamento'
+        });
+      }
     });
-
-    // Limpar formulário
-    this.novoPagamento = {
-      tipo: null,
-      dataVencimento: null,
-      valor: null,
-      status: null
-    };
   }
 
   cancelarPagamento(): void {
     this.displayDialogPagamento = false;
+    this.editandoPagamento = false;
+    this.pagamentoEditandoId = null;
     this.novoPagamento = {
       tipo: null,
       dataVencimento: null,
@@ -672,9 +801,10 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
     const novoContrato: IHistoricoContrato = {
       id: novoId,
+      imovelId: this.imovel.id,
       nomeArquivo: this.novoArquivoContrato.name,
       caminhoArquivo: `/assets/contratos/${this.novoArquivoContrato.name}`, // Simulado
-      dataInserção: new Date().toISOString(),
+      dataInsercao: new Date().toISOString(),
       tamanhoArquivo: this.novoArquivoContrato.size
     };
 
@@ -720,7 +850,30 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   }
 
   abrirHistoricoContratos(): void {
-    this.displayDialogHistoricoContratos = true;
+    if (!this.imovel?.id) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Erro',
+        detail: 'ID do imóvel não encontrado'
+      });
+      return;
+    }
+
+    // Carrega os contratos da API
+    this.imovelService.getContratos(this.imovel.id).subscribe({
+      next: (contratos) => {
+        this.historicoContratos = contratos;
+        this.displayDialogHistoricoContratos = true;
+      },
+      error: (error) => {
+        console.error('Erro ao carregar contratos:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Erro',
+          detail: 'Erro ao carregar histórico de contratos'
+        });
+      }
+    });
   }
 
   fecharHistoricoContratos(): void {
@@ -728,21 +881,51 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   }
 
   baixarContratoHistorico(contrato: IHistoricoContrato): void {
-    if (contrato.caminhoArquivo) {
-      // Se for uma URL completa, abre em nova aba
-      if (contrato.caminhoArquivo.startsWith('http://') || contrato.caminhoArquivo.startsWith('https://')) {
-        window.open(contrato.caminhoArquivo, '_blank');
-      } else {
-        // Se for um caminho relativo, tenta fazer download
+    if (!this.imovel?.id) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Erro',
+        detail: 'ID do imóvel não encontrado'
+      });
+      return;
+    }
+
+    if (!contrato.id) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Erro',
+        detail: 'ID do contrato não encontrado'
+      });
+      return;
+    }
+
+    // Baixa o contrato específico por ID
+    this.imovelService.downloadContratoPorId(this.imovel.id, contrato.id).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = contrato.caminhoArquivo;
+        link.href = url;
         link.download = contrato.nomeArquivo;
-        link.target = '_blank';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Sucesso',
+          detail: 'Contrato baixado com sucesso!'
+        });
+      },
+      error: (error) => {
+        console.error('Erro ao baixar contrato:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Erro',
+          detail: error.error?.error || 'Erro ao baixar o contrato'
+        });
       }
-    }
+    });
   }
 
   formatarTamanhoArquivo(bytes: number | undefined): string {
