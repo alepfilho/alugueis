@@ -345,7 +345,7 @@
                                 <span></span>
                             </div>
                             } @else {
-                            {{ mensagem.texto }}
+                            <span [innerHTML]="mensagem.texto | markdownBold"></span>
                             }
                         </div>
                     </div>

@@ -102,7 +102,7 @@ export class GeminiService {
       }
 
       const base64Data = await this.fileToBase64(fileData);
-      const prompt = `Com base no contrato em PDF fornecido, responda à seguinte pergunta: ${mensagem}\n\nPor favor, analise o documento e forneça uma resposta clara e objetiva.`;
+      const prompt = `Com base no contrato em PDF fornecido, responda à seguinte pergunta: ${mensagem}\n\nPor favor, analise o documento e forneça uma resposta clara e objetiva. com menos caracteres possivel.`;
       const content = [prompt, { inlineData: { mimeType, data: base64Data } }];
 
       const modelos = [this.modelo, ...GeminiService.MODELOS_FALLBACK.filter((m) => m !== this.modelo)];

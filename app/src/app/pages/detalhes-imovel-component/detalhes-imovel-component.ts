@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -22,6 +22,7 @@ import { FileUploadModule } from 'primeng/fileupload';
 
 import { GeminiService } from '../../services/gemini-service';
 import { ImovelService, IImovel, IInquilino, IHistoricoContrato, IPagamento } from '../../services/imovel-service';
+import { MarkdownBoldPipe } from '../../pipes/markdown-bold.pipe';
 
 interface IDetalhesImovel {
   id: number;
@@ -65,7 +66,8 @@ interface IMensagemChat {
     DatePipe,
     SelectModule,
     DatePickerModule,
-    FileUploadModule
+    FileUploadModule,
+    MarkdownBoldPipe
   ],
   providers: [MessageService],
   templateUrl: './detalhes-imovel-component.html',
@@ -138,6 +140,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     private messageService: MessageService,
     private geminiService: GeminiService,
     private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
     private route: ActivatedRoute,
     private imovelService: ImovelService
   ) { }
@@ -565,36 +568,22 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     try {
       // Verificar se o Gemini está configurado
       if (!this.geminiService.isConfigured()) {
-        // Se não estiver configurado, usar resposta simulada
         await new Promise(resolve => setTimeout(resolve, 1000));
-        const respostaGemini = this.gerarRespostaSimulada(mensagemUsuario);
-
-        const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
-        if (index !== -1) {
-          this.mensagens[index] = {
-            id: idMensagemCarregando,
-            texto: respostaGemini + '\n\n⚠️ Nota: Configure a API Key do Gemini para respostas mais precisas.',
-            remetente: 'assistente',
-            hora: new Date(),
-            carregando: false
-          };
-        }
+        const texto = this.gerarRespostaSimulada(mensagemUsuario) + '\n\n⚠️ Nota: Configure a API Key do Gemini para respostas mais precisas.';
+        this.mensagens = this.mensagens.map(m =>
+          m.id === idMensagemCarregando ? { id: m.id, texto, remetente: 'assistente' as const, hora: new Date(), carregando: false } : { ...m }
+        );
+        this.cdr.detectChanges();
         this.enviandoMensagem = false;
         return;
       }
 
-      // Verificar se há arquivo de contrato disponível
       if (!this.imovel?.id || !this.imovel?.arquivoContrato) {
-        const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
-        if (index !== -1) {
-          this.mensagens[index] = {
-            id: idMensagemCarregando,
-            texto: '⚠️ Não há arquivo de contrato disponível para este imóvel. Por favor, faça upload de um contrato primeiro.',
-            remetente: 'assistente',
-            hora: new Date(),
-            carregando: false
-          };
-        }
+        const texto = '⚠️ Não há arquivo de contrato disponível para este imóvel. Por favor, faça upload de um contrato primeiro.';
+        this.mensagens = this.mensagens.map(m =>
+          m.id === idMensagemCarregando ? { id: m.id, texto, remetente: 'assistente' as const, hora: new Date(), carregando: false } : { ...m }
+        );
+        this.cdr.detectChanges();
         this.enviandoMensagem = false;
         return;
       }
@@ -605,16 +594,11 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
         pdfBlob = await firstValueFrom(this.imovelService.downloadContrato(this.imovel.id));
       } catch (error) {
         console.error('Erro ao baixar contrato:', error);
-        const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
-        if (index !== -1) {
-          this.mensagens[index] = {
-            id: idMensagemCarregando,
-            texto: '⚠️ Erro ao baixar o arquivo de contrato. Verifique se o arquivo existe.',
-            remetente: 'assistente',
-            hora: new Date(),
-            carregando: false
-          };
-        }
+        const texto = '⚠️ Erro ao baixar o arquivo de contrato. Verifique se o arquivo existe.';
+        this.mensagens = this.mensagens.map(m =>
+          m.id === idMensagemCarregando ? { id: m.id, texto, remetente: 'assistente' as const, hora: new Date(), carregando: false } : { ...m }
+        );
+        this.cdr.detectChanges();
         this.enviandoMensagem = false;
         return;
       }
@@ -622,58 +606,31 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       // Enviar mensagem para o Gemini com o PDF
       const respostaGemini = await this.geminiService.enviarMensagemComArquivo(mensagemUsuario, pdfBlob);
 
-      console.log('Resposta recebida do Gemini:', respostaGemini);
-      console.log('Tipo da resposta:', typeof respostaGemini);
-      console.log('Tamanho da resposta:', respostaGemini?.length);
-
-      // Atualizar mensagem de carregamento com a resposta
-      const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
-      console.log('Índice da mensagem encontrado:', index);
-
-      if (index !== -1) {
-        const mensagemAtualizada = {
-          id: idMensagemCarregando,
-          texto: respostaGemini || 'Resposta vazia recebida',
-          remetente: 'assistente' as const,
-          hora: new Date(),
-          carregando: false
-        };
-
-        console.log('Atualizando mensagem:', mensagemAtualizada);
-        this.mensagens[index] = mensagemAtualizada;
-
-        // Forçar detecção de mudanças
-        this.mensagens = [...this.mensagens];
+      const textoResposta = respostaGemini ?? 'Resposta vazia recebida';
+      this.ngZone.run(() => {
+        this.mensagens = this.mensagens.map(m =>
+          m.id === idMensagemCarregando
+            ? { id: m.id, texto: textoResposta, remetente: 'assistente' as const, hora: new Date(), carregando: false }
+            : { ...m }
+        );
         this.cdr.detectChanges();
-
-        console.log('Mensagens após atualização:', this.mensagens);
-      } else {
-        console.error('Mensagem de carregamento não encontrada com ID:', idMensagemCarregando);
-      }
+      });
     } catch (error) {
       console.error('Erro ao processar mensagem com Gemini:', error);
+      const mensagemErro = error instanceof Error && error.message.includes('API Key')
+        ? '⚠️ API Key do Gemini não configurada. Configure a chave da API para usar o assistente.'
+        : error instanceof Error && error.message.includes('conexão')
+          ? '⚠️ Erro de conexão. Verifique sua internet e tente novamente.'
+          : 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.';
 
-      // Atualizar mensagem de erro
-      const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
-      if (index !== -1) {
-        let mensagemErro = 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.';
-
-        if (error instanceof Error) {
-          if (error.message.includes('API Key')) {
-            mensagemErro = '⚠️ API Key do Gemini não configurada. Configure a chave da API para usar o assistente.';
-          } else if (error.message.includes('conexão')) {
-            mensagemErro = '⚠️ Erro de conexão. Verifique sua internet e tente novamente.';
-          }
-        }
-
-        this.mensagens[index] = {
-          id: idMensagemCarregando,
-          texto: mensagemErro,
-          remetente: 'assistente',
-          hora: new Date(),
-          carregando: false
-        };
-      }
+      this.ngZone.run(() => {
+        this.mensagens = this.mensagens.map(m =>
+          m.id === idMensagemCarregando
+            ? { id: m.id, texto: mensagemErro, remetente: 'assistente' as const, hora: new Date(), carregando: false }
+            : { ...m }
+        );
+        this.cdr.detectChanges();
+      });
     } finally {
       this.enviandoMensagem = false;
     }
