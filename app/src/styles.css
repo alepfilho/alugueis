@@ -1,2 +1,17 @@
 @import "tailwindcss";
-@import "primeicons/primeicons.css";/* You can add global styles to this file, and also import other style files */
+@import "primeicons/primeicons.css";
+
+/* Float action button: fixo no canto inferior direito da tela */
+.fab {
+  position: fixed !important;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 1000;
+}
+
+/* Mensagem quando não há itens na lista */
+.empty-state-message {
+  color: #4b5563;
+  padding: 1.5rem 0;
+  margin: 0;
+}

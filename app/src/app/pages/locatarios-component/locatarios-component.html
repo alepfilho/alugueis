@@ -5,28 +5,32 @@
     [rounded]="true"
     severity="primary"
     size="large"
-    class="fixed bottom-5 right-5"
+    class="fab"
 >
 </a>
 <div class="grid grid-cols-5 gap-5">
     <p-card class="col-span-5">
         <h3>Locatários</h3>
 
-        <p-table [value]="locatarios" stripedRows [tableStyle]="{'min-width': '50rem'}">
-            <ng-template #header>
-                <tr>
-                    <th>Nome</th>
-                    <th>Telefone</th>
-                    <th>E-mail</th>
-                </tr>
-            </ng-template>
-            <ng-template #body let-locatario>
-                <tr>
-                    <td><a routerLink="/home/detalhes-locatario/{{locatario.id}}" class="underline">{{locatario.nome}}</a></td>
-                    <td>{{locatario.telefone}}</td>
-                    <td>{{ locatario.email }}</td>
-                </tr>
-            </ng-template>
-        </p-table>
+        @if (locatarios?.length) {
+            <p-table [value]="locatarios" stripedRows [tableStyle]="{'min-width': '50rem'}">
+                <ng-template #header>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>E-mail</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-locatario>
+                    <tr>
+                        <td><a routerLink="/home/detalhes-locatario/{{locatario.id}}" class="underline">{{locatario.nome}}</a></td>
+                        <td>{{locatario.telefone}}</td>
+                        <td>{{ locatario.email }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        } @else {
+            <p class="empty-state-message">Nenhum locatário cadastrado. Clique no botão <strong>+</strong> no canto inferior direito para adicionar seu primeiro locatário.</p>
+        }
     </p-card>
 </div>

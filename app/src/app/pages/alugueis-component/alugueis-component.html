@@ -5,46 +5,50 @@
     [rounded]="true"
     severity="primary"
     size="large"
-    class="fixed bottom-5 right-5"
+    class="fab"
 >
 </a>
 <div class="grid grid-cols-5 gap-5">
     <p-card class="col-span-5">
-        <h3>Imoveis atuais</h3>
+        <h3>Imóveis atuais</h3>
 
-        <p-table [value]="imoveis" stripedRows [tableStyle]="{'min-width': '50rem'}">
-            <ng-template #header>
-                <tr>
-                    <th>Inquilino</th>
-                    <th>Valor do Aluguel</th>
-                    <th>Data inicio</th>
-                    <th>Inadimplências</th>
-                </tr>
-            </ng-template>
-            <ng-template #body let-imovel>
-                <tr>
-                    <td>
-                        <a [routerLink]="['/home/detalhes-imovel', imovel.id]" class="underline">
-                            {{imovel.inquilino !== 'Sem inquilino' ? imovel.inquilino : imovel.endereco}}
-                        </a>
-                    </td>
-                    <td>{{imovel.valor_aluguel |  currency: 'BRL' }}</td>
-                    <td>{{imovel.data_inicio}}</td>
-                    <td>
-                        @if(!imovel.status_aluguel){
-                        <p-tag severity="danger" value="aluguel não pago" />
-                        }
-                        
-                        @if(!imovel.status_iptu){
-                        <p-tag severity="danger" value="iptu não pago" />
-                        }
-                        
-                        @if(!imovel.status_condominio){
-                        <p-tag severity="danger" value="Condomínio não pago" />
-                        }
-                    </td>
-                </tr>
-            </ng-template>
-        </p-table>
+        @if (imoveis?.length) {
+            <p-table [value]="imoveis" stripedRows [tableStyle]="{'min-width': '50rem'}">
+                <ng-template #header>
+                    <tr>
+                        <th>Inquilino</th>
+                        <th>Valor do Aluguel</th>
+                        <th>Data inicio</th>
+                        <th>Inadimplências</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-imovel>
+                    <tr>
+                        <td>
+                            <a [routerLink]="['/home/detalhes-imovel', imovel.id]" class="underline">
+                                {{imovel.inquilino !== 'Sem inquilino' ? imovel.inquilino : imovel.endereco}}
+                            </a>
+                        </td>
+                        <td>{{imovel.valor_aluguel |  currency: 'BRL' }}</td>
+                        <td>{{imovel.data_inicio}}</td>
+                        <td>
+                            @if(!imovel.status_aluguel){
+                            <p-tag severity="danger" value="aluguel não pago" />
+                            }
+                            
+                            @if(!imovel.status_iptu){
+                            <p-tag severity="danger" value="iptu não pago" />
+                            }
+                            
+                            @if(!imovel.status_condominio){
+                            <p-tag severity="danger" value="Condomínio não pago" />
+                            }
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        } @else {
+            <p class="empty-state-message">Nenhum imóvel cadastrado. Clique no botão <strong>+</strong> no canto inferior direito para adicionar seu primeiro imóvel.</p>
+        }
     </p-card>
 </div>

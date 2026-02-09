@@ -71,6 +71,50 @@ export class UserService {
 
   private getStoredUser(): IUser | null {
     const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    const user = userStr ? JSON.parse(userStr) : null;
+    if (user && !user.role) {
+      user.role = 'admin';
+    }
+    return user;
   }
+
+  createCliente(nome: string, email: string, senha: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${API_CONFIG.baseUrl}/auth/users`, {
+      name: nome,
+      email,
+      password: senha
+    }).pipe(
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  /** Lista clientes (apenas admin). */
+  listClientes(): Observable<IClienteListItem[]> {
+    return this.http.get<IClienteListItem[]>(`${API_CONFIG.baseUrl}/users`).pipe(
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  /** Atualiza cliente (apenas admin). Senha opcional. */
+  updateCliente(id: number, data: { name?: string; email?: string; password?: string }): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`${API_CONFIG.baseUrl}/users/${id}`, data).pipe(
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  /** Desativa cliente e exclui imóveis e inquilinos dele (apenas admin). */
+  deactivateCliente(id: number): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${API_CONFIG.baseUrl}/users/${id}/deactivate`, {}).pipe(
+      catchError(error => throwError(() => error))
+    );
+  }
+}
+
+export interface IClienteListItem {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  created_at: string;
 }

@@ -9,6 +9,14 @@ aside {
     flex-shrink: 0;
 }
 
+aside .space-y-3 > a,
+aside .space-y-3 > button {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+}
+
 main {
     flex: 1;
     overflow-y: auto;

@@ -1,23 +1,68 @@
-<div class="grid grid-cols-5 gap-5">
-    <p-card>
-        <h3 class="font-lg font-bold mb-2">Alugueis</h3>
-        <p class="text-4xl font-bold">4 / <span class="text-red-500">2</span></p>
-        <span class="text-xs">Atrasados: Alexandre</span>
-    </p-card>
-    <p-card>
-        <h3 class="font-lg font-bold mb-2">Condomínio</h3>
-        <p class="text-4xl font-bold">4 / <span class="text-red-500">2</span></p>
-        <span class="text-xs">Atrasados: Hiroko</span>
-    </p-card>
-    <p-card>
-        <h3 class="font-lg font-bold mb-2">IPTU</h3>
-        <p class="text-4xl font-bold">4 / <span class="text-red-500">2</span></p>
-        <span class="text-xs">Atrasados: Hiroko, Alexandre</span>
-    </p-card>
-    
-    <p-card>
-        <h3 class="font-lg font-bold mb-2">Indíce IGP-C</h3>
-        <p class="text-4xl font-bold">4.5%</p>
-        <span class="text-xs">Valor referente ao mês atual</span>
-    </p-card>
-</div>
+@if (loading) {
+    <div class="grid grid-cols-5 gap-5">
+        @for (i of [1,2,3,4]; track i) {
+            <p-card>
+                <p-skeleton width="8rem" height="1.25rem" class="mb-2" />
+                <p-skeleton width="6rem" height="2.5rem" class="mb-2" />
+                <p-skeleton width="100%" height="0.875rem" />
+            </p-card>
+        }
+    </div>
+} @else if (error) {
+    <p class="text-red-600">Erro ao carregar o resumo.</p>
+} @else if (resumo) {
+    <div class="grid grid-cols-5 gap-5">
+        <p-card>
+            <h3 class="font-lg font-bold mb-2">Alugueis</h3>
+            <p class="text-4xl font-bold">{{ resumo.alugueis.total }} / <span class="text-red-500">{{ resumo.alugueis.atrasados }}</span></p>
+            <span class="text-xs">Atrasados: {{ formatNomesAtrasados(resumo.alugueis.nomesAtrasados) }}</span>
+        </p-card>
+        <p-card>
+            <h3 class="font-lg font-bold mb-2">Condomínio</h3>
+            <p class="text-4xl font-bold">{{ resumo.condominio.total }} / <span class="text-red-500">{{ resumo.condominio.atrasados }}</span></p>
+            <span class="text-xs">Atrasados: {{ formatNomesAtrasados(resumo.condominio.nomesAtrasados) }}</span>
+        </p-card>
+        <p-card>
+            <h3 class="font-lg font-bold mb-2">IPTU</h3>
+            <p class="text-4xl font-bold">{{ resumo.iptu.total }} / <span class="text-red-500">{{ resumo.iptu.atrasados }}</span></p>
+            <span class="text-xs">Atrasados: {{ formatNomesAtrasados(resumo.iptu.nomesAtrasados) }}</span>
+        </p-card>
+        <p-card>
+            <h3 class="font-lg font-bold mb-2">IPCA</h3>
+            @if (loadingIndices) {
+                <p-skeleton width="5rem" height="2.5rem" class="mb-2" />
+                <span class="text-xs">Acumulado 12 meses</span>
+            } @else if (indices) {
+                <p class="text-4xl font-bold">{{ formatPercent(indices.ipcaAcumulado12) }}</p>
+                <span class="text-xs">Acumulado 12 meses</span>
+                @if (indices.ultimaAtualizacao) {
+                    <span class="text-xs block mt-1">Atualizado: {{ indices.ultimaAtualizacao }}</span>
+                }
+            } @else {
+                <p class="text-4xl font-bold">—</p>
+                <span class="text-xs">Clique em Atualizar para buscar</span>
+            }
+        </p-card>
+        <p-card>
+            <h3 class="font-lg font-bold mb-2">IGPM</h3>
+            @if (loadingIndices) {
+                <p-skeleton width="5rem" height="2.5rem" class="mb-2" />
+                <span class="text-xs">Mês anterior / Acum. 12 meses</span>
+            } @else if (indices) {
+                <p class="text-4xl font-bold">{{ formatPercent(indices.igpmMesAnterior) }}</p>
+                <span class="text-xs">Mês anterior</span>
+                <p class="text-xl font-semibold mt-2">{{ formatPercent(indices.igpmAcumulado12) }}</p>
+                <span class="text-xs">Acumulado 12 meses</span>
+            } @else {
+                <p class="text-4xl font-bold">—</p>
+                <span class="text-xs">Clique em Atualizar para buscar</span>
+            }
+        </p-card>
+        @if (isAdmin) {
+            <p-card class="col-span-5 flex flex-row items-center justify-between">
+                <span class="text-sm">Índices obtidos de <a href="https://paineldeindices.com.br/indice/igpm/" target="_blank" rel="noopener" class="underline">Painel de Índices</a>. Atualize para buscar os valores mais recentes.</span>
+                <button type="button" pButton label="Atualizar índices" icon="pi pi-refresh" [loading]="updatingIndices" [disabled]="updatingIndices" (click)="atualizarIndices()"></button>
+            </p-card>
+        }
+    </div>
+}

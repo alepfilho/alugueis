@@ -46,10 +46,12 @@ func ConnectDB() {
 		&models.HistoricoValor{},
 		&models.HistoricoContrato{},
 		&models.Pagamento{},
+		&models.IndiceMensal{},
+		&models.IndiceResumo{},
 	)
 	if err != nil {
 		log.Fatal("Falha na migração: ", err)
 	}
-	
+
 	log.Println("Banco de dados migrado com sucesso!")
 }

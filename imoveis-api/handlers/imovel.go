@@ -151,6 +151,12 @@ func CriarImovel(c *fiber.Ctx) error {
 		imovel.InquilinoID = locatarioIdUint
 	}
 
+	// Se o usuário logado for cliente, vincula o imóvel a ele (para desativação em cascata)
+	if uid, ok := c.Locals("user_id").(uint); ok {
+		if role, ok := c.Locals("role").(string); ok && role == models.RoleCliente {
+			imovel.UserID = &uid
+		}
+	}
 	// Cria o imóvel (já com InquilinoID se fornecido)
 	if result := database.DB.Create(&imovel); result.Error != nil {
 		// Se falhar, remove arquivo temporário se existir
@@ -825,4 +831,53 @@ func AtualizarPagamento(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(pagamento)
+}
+
+// ResumoPayload agrupa totais e atrasados por tipo de pagamento
+func resumoPorTipo(pagamentos []models.Pagamento, tipo string) (total, atrasados int, nomes []string) {
+	nomesMap := make(map[string]bool)
+	for _, p := range pagamentos {
+		if p.Tipo != tipo {
+			continue
+		}
+		total++
+		if p.Status == "atrasado" {
+			atrasados++
+			if p.Inquilino != nil && p.Inquilino.Nome != "" {
+				nomesMap[p.Inquilino.Nome] = true
+			}
+		}
+	}
+	for n := range nomesMap {
+		nomes = append(nomes, n)
+	}
+	return total, atrasados, nomes
+}
+
+// Resumo retorna totais e atrasados por tipo (aluguel, condominio, iptu) para o dashboard
+func Resumo(c *fiber.Ctx) error {
+	var pagamentos []models.Pagamento
+	if result := database.DB.Preload("Inquilino").Where("status IN ?", []string{"pendente", "atrasado"}).Find(&pagamentos); result.Error != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao buscar resumo"})
+	}
+	totalAluguel, atrasadosAluguel, nomesAluguel := resumoPorTipo(pagamentos, "aluguel")
+	totalCond, atrasadosCond, nomesCond := resumoPorTipo(pagamentos, "condominio")
+	totalIptu, atrasadosIptu, nomesIptu := resumoPorTipo(pagamentos, "iptu")
+	return c.JSON(fiber.Map{
+		"alugueis": fiber.Map{
+			"total":          totalAluguel,
+			"atrasados":      atrasadosAluguel,
+			"nomesAtrasados": nomesAluguel,
+		},
+		"condominio": fiber.Map{
+			"total":          totalCond,
+			"atrasados":      atrasadosCond,
+			"nomesAtrasados": nomesCond,
+		},
+		"iptu": fiber.Map{
+			"total":          totalIptu,
+			"atrasados":      atrasadosIptu,
+			"nomesAtrasados": nomesIptu,
+		},
+	})
 }

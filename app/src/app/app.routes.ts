@@ -9,6 +9,7 @@ import { DetalhesImovelComponent } from './pages/detalhes-imovel-component/detal
 import { DetalheLocatarioComponent } from './pages/detalhe-locatario/detalhe-locatario';
 import { NovoLocatarioComponent } from './pages/novo-locatario/novo-locatario';
 import { NovoImovel } from './pages/novo-imovel/novo-imovel';
+import { ClientesComponent } from './pages/clientes-component/clientes-component';
 
 export const routes: Routes = [
     {
@@ -48,6 +49,10 @@ export const routes: Routes = [
             {
                 path: 'novo-imovel',
                 component: NovoImovel
+            },
+            {
+                path: 'clientes',
+                component: ClientesComponent
             }
         ]
     }

@@ -1,15 +1,34 @@
+<p-toast></p-toast>
 <div class="dashboard-container">
     <aside class="p-3">
         <div class="h-full bg-green-300 p-3 rounded-md flex flex-col justify-start items-center">
-            <p-avatar label="HT" size="large" />
+            <button type="button" class="cursor-pointer border-none bg-transparent p-0 rounded-full"
+                (click)="userMenuRef.toggle($event)" [attr.aria-label]="'Menu de ' + (currentUser?.name ?? 'usuário')">
+                <p-avatar [label]="userInitials" size="large" />
+            </button>
 
-            <div class="mt-8 space-y-3">
-                <a routerLink="/home/alugueis" pButton pTooltip="Alugueis" tooltipPosition="right">
+            <p-menu #userMenuRef [model]="userMenuItems" [popup]="true" />
+
+            <div class="mt-8 w-full space-y-3 flex flex-col items-stretch">
+                <a routerLink="/home" pButton pTooltip="Resumo" tooltipPosition="right" class="w-full justify-center">
                     <i class="pi pi-home"></i>
                 </a>
-                <a routerLink="/home/inquilinos" pButton pTooltip="Inquilinos" tooltipPosition="right">
+                <a routerLink="/home/alugueis" pButton pTooltip="Alugueis" tooltipPosition="right" class="w-full justify-center">
+                    <i class="pi pi-list"></i>
+                </a>
+                <a routerLink="/home/inquilinos" pButton pTooltip="Inquilinos" tooltipPosition="right" class="w-full justify-center">
                     <i class="pi pi-user"></i>
                 </a>
+                @if (isAdmin) {
+                    <a routerLink="/home/clientes" pButton pTooltip="Clientes" tooltipPosition="right"
+                        class="w-full justify-center">
+                        <i class="pi pi-users"></i>
+                    </a>
+                    <button type="button" pButton pTooltip="Criar cliente" tooltipPosition="right"
+                        class="w-full justify-center" (click)="openDialogCriarCliente()">
+                        <i class="pi pi-user-plus"></i>
+                    </button>
+                }
             </div>
         </div>
     </aside>
@@ -17,3 +36,31 @@
         <router-outlet />
     </main>
 </div>
+
+<p-dialog [(visible)]="displayDialogCriarCliente" [modal]="true" [style]="{ width: '28rem' }"
+    header="Criar cliente" (onHide)="closeDialogCriarCliente()" [closable]="!submittingCliente">
+    <form (ngSubmit)="onSubmitCriarCliente()">
+        <div class="flex flex-col gap-3 mb-4">
+            <p-floatlabel>
+                <input id="clienteNome" type="text" pInputText [(ngModel)]="clienteNome" name="clienteNome"
+                    class="w-full" />
+                <label for="clienteNome">Nome</label>
+            </p-floatlabel>
+            <p-floatlabel>
+                <input id="clienteEmail" type="email" pInputText [(ngModel)]="clienteEmail" name="clienteEmail"
+                    class="w-full" />
+                <label for="clienteEmail">E-mail</label>
+            </p-floatlabel>
+            <p-floatlabel>
+                <input id="clienteSenha" type="password" pInputText [(ngModel)]="clienteSenha" name="clienteSenha"
+                    class="w-full" />
+                <label for="clienteSenha">Senha</label>
+            </p-floatlabel>
+        </div>
+        <div class="flex justify-end gap-2">
+            <button type="button" pButton label="Cancelar" severity="secondary" (click)="closeDialogCriarCliente()"
+                [disabled]="submittingCliente"></button>
+            <button type="submit" pButton label="Criar" [loading]="submittingCliente" [disabled]="submittingCliente"></button>
+        </div>
+    </form>
+</p-dialog>

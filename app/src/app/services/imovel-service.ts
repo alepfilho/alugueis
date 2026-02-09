@@ -122,6 +122,27 @@ export class ImovelService {
     );
   }
 
+  /** Resumo para o dashboard: totais e atrasados por tipo (aluguel, condominio, iptu) */
+  getResumo(): Observable<IResumo> {
+    return this.http.get<IResumo>(`${API_CONFIG.baseUrl}/resumo`).pipe(
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  /** Índices IPCA e IGPM (acumulado 12 e mês anterior) */
+  getIndices(): Observable<IIndices> {
+    return this.http.get<IIndices>(`${API_CONFIG.baseUrl}/indices`).pipe(
+      catchError(error => throwError(() => error))
+    );
+  }
+
+  /** Disparar atualização dos índices (scrape) - apenas admin */
+  atualizarIndices(): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${API_CONFIG.baseUrl}/indices/atualizar`, {}).pipe(
+      catchError(error => throwError(() => error))
+    );
+  }
+
   salvarPagamento(imovelId: number, pagamento: {
     tipo: 'aluguel' | 'iptu' | 'condominio';
     valor: number;
@@ -152,6 +173,25 @@ export class ImovelService {
         })
       );
   }
+}
+
+export interface IResumoTipo {
+  total: number;
+  atrasados: number;
+  nomesAtrasados: string[] | null;
+}
+
+export interface IResumo {
+  alugueis: IResumoTipo;
+  condominio: IResumoTipo;
+  iptu: IResumoTipo;
+}
+
+export interface IIndices {
+  ipcaAcumulado12: number;
+  igpmAcumulado12: number;
+  igpmMesAnterior: number;
+  ultimaAtualizacao?: string;
 }
 
 export interface IPagamento {

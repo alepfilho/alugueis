@@ -1,0 +1,57 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+<div class="grid grid-cols-5 gap-5">
+  <p-card class="col-span-5">
+    <h3>Clientes</h3>
+    @if (clientes.length) {
+      <p-table [value]="clientes" stripedRows [tableStyle]="{ 'min-width': '50rem' }">
+        <ng-template #header>
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Ações</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-cliente>
+          <tr>
+            <td>{{ cliente.name }}</td>
+            <td>{{ cliente.email }}</td>
+            <td>
+              <button type="button" pButton label="Editar" icon="pi pi-pencil" class="p-button-sm p-button-outlined p-button-secondary mr-2"
+                (click)="openEdit(cliente)"></button>
+              <button type="button" pButton label="Desativar" icon="pi pi-ban" class="p-button-sm p-button-outlined p-button-danger"
+                (click)="confirmDesativar(cliente)"></button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    } @else {
+      <p class="empty-state-message">Nenhum cliente cadastrado. Use o botão "Criar cliente" no menu para adicionar.</p>
+    }
+  </p-card>
+</div>
+
+<p-dialog [(visible)]="displayEditDialog" [modal]="true" [style]="{ width: '28rem' }"
+  header="Editar cliente" (onHide)="closeEdit()" [closable]="!submitting">
+  <form (ngSubmit)="saveEdit()">
+    <div class="flex flex-col gap-3 mb-4">
+      <p-floatlabel>
+        <input id="editNome" type="text" pInputText [(ngModel)]="editNome" name="editNome" class="w-full" />
+        <label for="editNome">Nome</label>
+      </p-floatlabel>
+      <p-floatlabel>
+        <input id="editEmail" type="email" pInputText [(ngModel)]="editEmail" name="editEmail" class="w-full" />
+        <label for="editEmail">E-mail</label>
+      </p-floatlabel>
+      <p-floatlabel>
+        <input id="editSenha" type="password" pInputText [(ngModel)]="editSenha" name="editSenha" class="w-full"
+          placeholder="Deixe em branco para não alterar" />
+        <label for="editSenha">Nova senha (opcional)</label>
+      </p-floatlabel>
+    </div>
+    <div class="flex justify-end gap-2">
+      <button type="button" pButton label="Cancelar" severity="secondary" (click)="closeEdit()" [disabled]="submitting"></button>
+      <button type="submit" pButton label="Salvar" [loading]="submitting" [disabled]="submitting"></button>
+    </div>
+  </form>
+</p-dialog>
