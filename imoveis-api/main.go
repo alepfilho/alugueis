@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"imoveis-api/database"
-	"imoveis-api/routes" // Importe o pacote routes
+	"imoveis-api/routes"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

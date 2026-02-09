@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked, ChangeDetec
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -142,8 +143,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   ) { }
 
   ngOnInit(): void {
-    // Configurar API Key do Gemini (opcional - pode ser feito via variável de ambiente)
-    this.geminiService.setApiKey('AIzaSyAxpz6UE6nG9MXt3mB0mda3OcC_xM0Yl9U');
+    this.geminiService.initializeGemini();
 
     this.items = [
       {
@@ -583,11 +583,44 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
         return;
       }
 
-      // Obter contexto do imóvel
-      const contexto = this.obterContextoImovel();
+      // Verificar se há arquivo de contrato disponível
+      if (!this.imovel?.id || !this.imovel?.arquivoContrato) {
+        const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
+        if (index !== -1) {
+          this.mensagens[index] = {
+            id: idMensagemCarregando,
+            texto: '⚠️ Não há arquivo de contrato disponível para este imóvel. Por favor, faça upload de um contrato primeiro.',
+            remetente: 'assistente',
+            hora: new Date(),
+            carregando: false
+          };
+        }
+        this.enviandoMensagem = false;
+        return;
+      }
 
-      // Enviar mensagem para o Gemini
-      const respostaGemini = await this.geminiService.enviarMensagem(mensagemUsuario, contexto);
+      // Baixar o PDF do contrato
+      let pdfBlob: Blob;
+      try {
+        pdfBlob = await firstValueFrom(this.imovelService.downloadContrato(this.imovel.id));
+      } catch (error) {
+        console.error('Erro ao baixar contrato:', error);
+        const index = this.mensagens.findIndex(m => m.id === idMensagemCarregando);
+        if (index !== -1) {
+          this.mensagens[index] = {
+            id: idMensagemCarregando,
+            texto: '⚠️ Erro ao baixar o arquivo de contrato. Verifique se o arquivo existe.',
+            remetente: 'assistente',
+            hora: new Date(),
+            carregando: false
+          };
+        }
+        this.enviandoMensagem = false;
+        return;
+      }
+
+      // Enviar mensagem para o Gemini com o PDF
+      const respostaGemini = await this.geminiService.enviarMensagemComArquivo(mensagemUsuario, pdfBlob);
 
       console.log('Resposta recebida do Gemini:', respostaGemini);
       console.log('Tipo da resposta:', typeof respostaGemini);
@@ -646,6 +679,8 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     }
   }
 
+  // Método não utilizado mais - agora usamos o PDF do contrato como fonte de dados
+  // Mantido para referência caso seja necessário no futuro
   obterContextoImovel(): string {
     // Retorna contexto do imóvel para enviar ao Gemini
     const formatarMoeda = (valor: number): string => {
