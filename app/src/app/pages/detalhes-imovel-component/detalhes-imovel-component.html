@@ -69,13 +69,13 @@
         <div class="col-span-1">
             <label for="tipo" class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
             <p-select [options]="tiposPagamento" [(ngModel)]="novoPagamento.tipo" optionLabel="label"
-                placeholder="Selecione o tipo" class="w-full" />
+                placeholder="Selecione o tipo" class="w-full" appendTo="body" />
         </div>
 
         <div class="col-span-1">
             <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
             <p-select [options]="statusPagamento" [(ngModel)]="novoPagamento.status" optionLabel="label"
-                placeholder="Selecione o status" class="w-full" />
+                placeholder="Selecione o status" class="w-full" appendTo="body" />
         </div>
 
         <div class="col-span-1">

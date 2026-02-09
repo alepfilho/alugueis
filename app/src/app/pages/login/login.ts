@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DisableButton } from '../../disable-button';
 import { Router } from '@angular/router';
@@ -15,13 +15,19 @@ import { MessageService } from 'primeng/api';
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
-export class Login {
+export class Login implements OnInit {
   constructor(
-    private router: Router, 
+    private router: Router,
     private userService: UserService,
     private messageService: MessageService
-  ) { }
-  
+  ) {}
+
+  ngOnInit() {
+    if (this.userService.getUserValue()) {
+      this.router.navigate(['/home']);
+    }
+  }
+
   submitted = signal(false);
   email = '';
   password = '';

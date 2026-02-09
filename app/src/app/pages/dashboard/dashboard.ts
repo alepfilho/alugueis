@@ -29,7 +29,6 @@ export class Dashboard implements OnInit {
   ngOnInit(): void {
     this.userService.user$.subscribe(user => {
       this.currentUser = user;
-      console.log(this.currentUser)
     })
   }
 }
