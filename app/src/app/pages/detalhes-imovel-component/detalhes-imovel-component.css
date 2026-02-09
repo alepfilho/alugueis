@@ -140,3 +140,10 @@
 .chat-messages::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+
+.fab-2{
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+}

@@ -12,7 +12,7 @@
     <p-card class="col-span-5">
         <h3>Imóveis atuais</h3>
 
-        @if (imoveis?.length) {
+        @if (imoveis.length) {
             <p-table [value]="imoveis" stripedRows [tableStyle]="{'min-width': '50rem'}">
                 <ng-template #header>
                     <tr>

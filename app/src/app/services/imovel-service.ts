@@ -182,6 +182,7 @@ export interface IResumoTipo {
 }
 
 export interface IResumo {
+  valorTotalAlugueisReceber?: number;
   alugueis: IResumoTipo;
   condominio: IResumoTipo;
   iptu: IResumoTipo;

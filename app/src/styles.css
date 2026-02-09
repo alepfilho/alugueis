@@ -1,12 +1,16 @@
 @import "tailwindcss";
 @import "primeicons/primeicons.css";
 
-/* Float action button: fixo no canto inferior direito da tela */
+/* Botão "Novo" padronizado: fixo no canto inferior direito, 20px de margem */
 .fab {
   position: fixed !important;
-  bottom: 1.25rem;
-  right: 1.25rem;
+  bottom: 20px;
+  right: 20px;
   z-index: 1000;
+  width: 3.5rem !important;
+  height: 3.5rem !important;
+  min-width: 3.5rem !important;
+  min-height: 3.5rem !important;
 }
 
 /* Mensagem quando não há itens na lista */

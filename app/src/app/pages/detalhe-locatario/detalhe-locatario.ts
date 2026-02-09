@@ -6,10 +6,10 @@ import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
-import { AutoCompleteModule } from 'primeng/autocomplete';
+import { SelectModule } from 'primeng/select';
 import { ILocatario } from '../../Interfaces/Ilocatario';
-import { IAlugueis } from '../../Interfaces/IAlugueis';
 import { LocatarioService } from '../../services/locatario-service';
+import { ImovelService, IImovel } from '../../services/imovel-service';
 
 @Component({
   selector: 'app-detalhe-locatario',
@@ -20,7 +20,7 @@ import { LocatarioService } from '../../services/locatario-service';
     InputTextModule,
     InputNumberModule,
     ButtonModule,
-    AutoCompleteModule
+    SelectModule
   ],
   templateUrl: './detalhe-locatario.html',
   styleUrl: './detalhe-locatario.css',
@@ -28,15 +28,16 @@ import { LocatarioService } from '../../services/locatario-service';
 export class DetalheLocatarioComponent implements OnInit {
   locatarioForm!: FormGroup;
   locatario: ILocatario | null = null;
-  imoveis: IAlugueis[] = [];
-  filteredImoveis: IAlugueis[] = [];
-  selectedImovel: IAlugueis | null = null;
+  imoveis: IImovel[] = [];
+  filteredImoveis: IImovel[] = [];
+  selectedImovel: IImovel | null = null;
   editandoLocatario: boolean = false;
 
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private locatarioService: LocatarioService,
+    private imovelService: ImovelService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -60,62 +61,46 @@ export class DetalheLocatarioComponent implements OnInit {
       });
     }
 
-    // Carregar lista de imóveis (aluguéis)
-    this.imoveis = [
-      {
-        id: 'uuid-aqui',
-        endereco: 'rua galvão bueno 485, ap 91',
-        valor_aluguel: 1700.80,
-        data_inicio: '10/01/2026',
-        status_aluguel: true,
-        status_iptu: false,
-        status_condominio: true,
-        inquilino: 'Alexanxre P Filho',
-        inquilino_id: 'uuid'
-      }
-    ];
-
-    // Inicializar lista filtrada com todos os imóveis
-    this.filteredImoveis = [...this.imoveis];
+    // Carregar lista de imóveis da API
+    this.imovelService.getAllImoveis().subscribe({
+      next: (data) => {
+        this.imoveis = data;
+        if (this.locatario) this.initializeForm();
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Erro ao carregar imóveis:', err)
+    });
   }
 
   private initializeForm(): void {
     if (!this.locatario) return;
 
-    // Encontrar o imóvel selecionado baseado no aluguel_id
-    this.selectedImovel = this.imoveis.find(imovel => imovel.id === this.locatario!.aluguel_id) || null;
+    const aluguelId = this.locatario.aluguel_id;
+    const idNum = typeof aluguelId === 'string' ? parseInt(aluguelId, 10) : aluguelId;
+    const valorId = (idNum != null && !isNaN(idNum)) ? idNum : null;
+    this.selectedImovel = valorId != null
+      ? (this.imoveis.find(im => im.id === valorId) ?? null)
+      : null;
 
     this.locatarioForm = this.fb.group({
       nome: [this.locatario.nome, [Validators.required]],
       telefone: [this.locatario.telefone, [Validators.required]],
       email: [this.locatario.email, [Validators.required, Validators.email]],
-      aluguel_id: [this.selectedImovel ?? null]
+      aluguel_id: [valorId]
     });
-  }
-
-  filterImoveis(event: any): void {
-    const query = event.query ? event.query.toLowerCase() : '';
-    if (!query) {
-      this.filteredImoveis = [...this.imoveis];
-    } else {
-      this.filteredImoveis = this.imoveis.filter(imovel => 
-        imovel.endereco.toLowerCase().includes(query)
-      );
-    }
   }
 
   onSubmit(): void {
     if (this.locatarioForm.valid && this.locatario) {
-      const selectedImovel = this.locatarioForm.get('aluguel_id')?.value;
+      const aluguelId = this.locatarioForm.get('aluguel_id')?.value;
       const formValue = {
         id: this.locatario.id,
         nome: this.locatarioForm.get('nome')?.value,
         telefone: this.locatarioForm.get('telefone')?.value,
         email: this.locatarioForm.get('email')?.value,
-        aluguel_id: selectedImovel?.id || ''
+        aluguel_id: aluguelId ?? null
       };
       console.log('Dados salvos:', formValue);
-      // Aqui você pode adicionar a lógica para salvar os dados
     }
   }
 
@@ -140,20 +125,19 @@ export class DetalheLocatarioComponent implements OnInit {
 
   salvarEdicaoLocatario(): void {
     if (this.locatarioForm.valid && this.locatario) {
-      const selectedImovel = this.locatarioForm.get('aluguel_id')?.value;
+      const aluguelId = this.locatarioForm.get('aluguel_id')?.value as number | null;
       const updateData = {
         nome: this.locatarioForm.get('nome')?.value,
         telefone: this.locatarioForm.get('telefone')?.value,
         email: this.locatarioForm.get('email')?.value,
-        aluguel_id: selectedImovel?.id || null
+        aluguel_id: aluguelId ?? null
       };
 
       // Atualizar locatário na API
       this.locatarioService.updateLocatario(this.locatario.id, updateData).subscribe({
         next: (data) => {
           this.locatario = data;
-          // Atualizar o imóvel selecionado
-          this.selectedImovel = selectedImovel;
+          this.selectedImovel = aluguelId != null ? (this.imoveis.find(im => im.id === aluguelId) ?? null) : null;
           this.editandoLocatario = false;
           this.cdr.detectChanges();
           console.log('Locatário atualizado com sucesso:', this.locatario);

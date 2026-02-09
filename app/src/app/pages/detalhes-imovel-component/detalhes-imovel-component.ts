@@ -22,6 +22,8 @@ import { FileUploadModule } from 'primeng/fileupload';
 
 import { GeminiService } from '../../services/gemini-service';
 import { ImovelService, IImovel, IInquilino, IHistoricoContrato, IPagamento } from '../../services/imovel-service';
+import { LocatarioService } from '../../services/locatario-service';
+import { ILocatario } from '../../Interfaces/Ilocatario';
 import { MarkdownBoldPipe } from '../../pipes/markdown-bold.pipe';
 
 interface IDetalhesImovel {
@@ -103,6 +105,8 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   displayDialogHistoricoContratos: boolean = false;
   historicoContratos: IHistoricoContrato[] = [];
   novoArquivoContrato: File | null = null;
+  locatarios: ILocatario[] = [];
+  selectedInquilinoId: number | null = null;
 
   // Chat
   mensagens: IMensagemChat[] = [];
@@ -142,8 +146,18 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
     private route: ActivatedRoute,
-    private imovelService: ImovelService
+    private imovelService: ImovelService,
+    private locatarioService: LocatarioService
   ) { }
+
+  /** Inquilinos que podem ser vinculados: sem imóvel ou o inquilino atual deste imóvel */
+  get inquilinosParaSelect(): ILocatario[] {
+    const idAtual = this.imovel?.inquilino?.id;
+    return this.locatarios.filter(l =>
+      (l.aluguel_id == null || l.aluguel_id === undefined || l.aluguel_id === '') ||
+      (idAtual != null && l.id === idAtual)
+    );
+  }
 
   ngOnInit(): void {
     this.geminiService.initializeGemini();
@@ -167,6 +181,14 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
     // Obter o ID da rota
     const id = this.route.snapshot.paramMap.get('id');
+
+    this.locatarioService.getLocatarios().subscribe({
+      next: (data) => {
+        this.locatarios = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Erro ao carregar inquilinos:', err)
+    });
 
     if (id) {
       const imovelId = parseInt(id, 10);
@@ -344,6 +366,15 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       status: null
     };
     this.displayDialogPagamento = true;
+  }
+
+  /** Preenche o valor do pagamento com o valor definido no imóvel ao escolher o tipo (aluguel, iptu, condomínio). */
+  onTipoPagamentoChange(tipo: { label: string; value: string } | null): void {
+    if (!tipo || !this.imovel) return;
+    const value = typeof tipo === 'object' && tipo !== null ? (tipo as { value: string }).value : tipo;
+    if (value === 'aluguel') this.novoPagamento.valor = this.imovel.valorAluguel ?? null;
+    else if (value === 'iptu') this.novoPagamento.valor = this.imovel.valorIptu ?? null;
+    else if (value === 'condominio') this.novoPagamento.valor = this.imovel.valorCondominio ?? null;
   }
 
   editarPagamento(pagamento: IPagamento): void {
@@ -667,12 +698,11 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
   // Método temporário para simular respostas (remover quando integrar com Gemini)
   entrarModoEdicaoImovel(): void {
     this.editandoImovel = true;
-    // Criar cópia dos dados para edição
+    this.selectedInquilinoId = this.imovel?.inquilino?.id ?? null;
     this.imovelEditado = {
       ...this.imovel,
       inquilino: { ...this.imovel.inquilino }
     };
-    // Converter string de data para Date object para o datepicker
     if (this.imovel.dataInicioContrato) {
       this.dataInicioContratoEditada = new Date(this.imovel.dataInicioContrato + 'T00:00:00');
     }
@@ -680,6 +710,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
 
   cancelarEdicaoImovel(): void {
     this.editandoImovel = false;
+    this.selectedInquilinoId = null;
     this.imovelEditado = {} as IDetalhesImovel;
     this.dataInicioContratoEditada = null;
     this.novoArquivoContrato = null;
@@ -707,7 +738,7 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       this.processarUploadContrato();
     }
 
-    // 3. Preparar o objeto para envio - APENAS campos do imóvel (sem relacionamentos)
+    // 3. Preparar o objeto para envio (campos do imóvel + inquilino selecionado)
     const payloadEnvio: Partial<IImovel> = {
       endereco: this.imovelEditado.endereco || '',
       valorAluguel: this.imovelEditado.valorAluguel || 0,
@@ -715,7 +746,8 @@ export class DetalhesImovelComponent implements OnInit, AfterViewChecked {
       valorIptu: this.imovelEditado.valorIptu || 0,
       valorCaucao: this.imovelEditado.valorCaucao || 0,
       dataInicioContrato: dataInicioContratoFormatada,
-      arquivoContrato: this.imovelEditado.arquivoContrato || ''
+      arquivoContrato: this.imovelEditado.arquivoContrato || '',
+      inquilino_id: this.selectedInquilinoId ?? null
     };
 
     // 4. CHAMADA AO SERVIÇO

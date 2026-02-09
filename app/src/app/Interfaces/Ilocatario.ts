@@ -3,7 +3,7 @@ export interface ILocatario {
     nome: string,
     telefone: string,
     email: string,
-    aluguel_id: string | null,
+    aluguel_id?: string | number | null,
     created_at?: string,
     updated_at?: string
 }

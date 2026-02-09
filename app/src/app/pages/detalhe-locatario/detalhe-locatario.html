@@ -93,17 +93,15 @@
                     <!-- Imóvel -->
                     <div class="col-span-1">
                         <label for="aluguel_id" class="block mb-2 text-sm font-medium">Imóvel</label>
-                        <p-autocomplete
-                            fluid
+                        <p-select
                             inputId="aluguel_id"
                             formControlName="aluguel_id"
-                            [suggestions]="filteredImoveis"
-                            (completeMethod)="filterImoveis($event)"
+                            [options]="imoveis"
                             optionLabel="endereco"
-                            placeholder="Selecione ou digite um imóvel"
+                            optionValue="id"
+                            placeholder="Selecione o imóvel"
                             [style]="{ width: '100%' }"
                             [class.ng-invalid]="locatarioForm.get('aluguel_id')?.invalid && locatarioForm.get('aluguel_id')?.touched"
-                            [forceSelection]="false"
                         />
                         @if (locatarioForm.get('aluguel_id')?.invalid && locatarioForm.get('aluguel_id')?.touched) {
                             <small class="p-error">Imóvel é obrigatório</small>

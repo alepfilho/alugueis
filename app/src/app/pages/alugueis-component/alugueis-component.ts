@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -6,11 +6,11 @@ import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { IAlugueis } from '../../Interfaces/IAlugueis';
-import { ImovelService, IImovel } from '../../services/imovel-service';
+import { IImovel, ImovelService } from '../../services/imovel-service';
 
 @Component({
   selector: 'app-alugueis-component',
-  imports: [CardModule, ButtonModule, TableModule, TagModule, CurrencyPipe, RouterLink, DatePipe],
+  imports: [CardModule, ButtonModule, TableModule, TagModule, CurrencyPipe, RouterLink],
   templateUrl: './alugueis-component.html',
   styleUrl: './alugueis-component.css',
 })

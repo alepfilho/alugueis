@@ -91,6 +91,7 @@ export class ResumoComponent implements OnInit {
     const c = data?.condominio;
     const i = data?.iptu;
     return {
+      valorTotalAlugueisReceber: data?.valorTotalAlugueisReceber ?? 0,
       alugueis: { total: a?.total ?? 0, atrasados: a?.atrasados ?? 0, nomesAtrasados: Array.isArray(a?.nomesAtrasados) ? a.nomesAtrasados : [] },
       condominio: { total: c?.total ?? 0, atrasados: c?.atrasados ?? 0, nomesAtrasados: Array.isArray(c?.nomesAtrasados) ? c.nomesAtrasados : [] },
       iptu: { total: i?.total ?? 0, atrasados: i?.atrasados ?? 0, nomesAtrasados: Array.isArray(i?.nomesAtrasados) ? i.nomesAtrasados : [] },

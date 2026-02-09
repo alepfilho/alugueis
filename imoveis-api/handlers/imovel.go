@@ -141,13 +141,17 @@ func CriarImovel(c *fiber.Ctx) error {
 		// O caminho já está no campo ArquivoContrato do JSON
 	}
 
-	// Se foi fornecido um locatarioId, valida e seta o InquilinoID antes de criar
+	// Se foi fornecido um locatarioId, valida e seta o InquilinoID antes de criar (cliente só pode vincular inquilino próprio)
 	if locatarioIdUint != nil {
 		var inquilino models.Inquilino
 		if result := database.DB.First(&inquilino, *locatarioIdUint); result.Error != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Inquilino não encontrado"})
 		}
-		// Seta o InquilinoID no imóvel antes de criar
+		if role, ok := c.Locals("role").(string); ok && role == models.RoleCliente {
+			if uid, ok := c.Locals("user_id").(uint); ok && (inquilino.UserID == nil || *inquilino.UserID != uid) {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Inquilino não encontrado"})
+			}
+		}
 		imovel.InquilinoID = locatarioIdUint
 	}
 
@@ -166,20 +170,22 @@ func CriarImovel(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao criar imóvel"})
 	}
 
-	// Se foi fornecido um locatarioId, atualiza o ImovelID do inquilino
+	// Se foi fornecido um locatarioId, atualiza o inquilino com o id deste imóvel (e desvincula do imóvel anterior, se houver)
 	if locatarioIdUint != nil {
 		var inquilino models.Inquilino
 		if result := database.DB.First(&inquilino, *locatarioIdUint); result.Error != nil {
-			// Se falhar, remove arquivo temporário se existir
 			if arquivoTemporario != "" {
 				os.Remove(arquivoTemporario)
 			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao buscar inquilino após criação"})
 		}
-		// Atualiza o ImovelID do inquilino
+		// Se o inquilino estava em outro imóvel, desvincula esse imóvel
+		if inquilino.ImovelID != nil && *inquilino.ImovelID > 0 {
+			database.DB.Model(&models.Imovel{}).Where("id = ?", *inquilino.ImovelID).Update("inquilino_id", nil)
+		}
+		// Atualiza o inquilino com o id deste imóvel (tabela inquilinos passa a ter imovel_id preenchido)
 		inquilino.ImovelID = &imovel.ID
 		if result := database.DB.Save(&inquilino); result.Error != nil {
-			// Se falhar, remove arquivo temporário se existir
 			if arquivoTemporario != "" {
 				os.Remove(arquivoTemporario)
 			}
@@ -271,20 +277,22 @@ func CriarImovel(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(imovel)
 }
 
-// ListarImoveis - Retorna todos (com dados básicos do Inquilino)
+// ListarImoveis - Retorna imóveis do usuário (cliente vê só os seus; admin vê todos)
 func ListarImoveis(c *fiber.Ctx) error {
 	var imoveis []models.Imovel
-
-	// O .Preload("Inquilino") traz os dados de quem está alugando
-	// Se quiser trazer TUDO na listagem, adicione mais Preloads, mas pode ficar pesado.
-	if result := database.DB.Preload("Inquilino").Find(&imoveis); result.Error != nil {
+	q := database.DB.Preload("Inquilino")
+	if role, ok := c.Locals("role").(string); ok && role == models.RoleCliente {
+		if uid, ok := c.Locals("user_id").(uint); ok {
+			q = q.Where("user_id = ?", uid)
+		}
+	}
+	if result := q.Find(&imoveis); result.Error != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Erro ao buscar imóveis"})
 	}
-
 	return c.JSON(imoveis)
 }
 
-// BuscarImovel - Retorna UM imóvel com TODOS os detalhes (Pagamentos, Histórico, etc)
+// BuscarImovel - Retorna UM imóvel com TODOS os detalhes (cliente só acessa os próprios)
 func BuscarImovel(c *fiber.Ctx) error {
 	id, err := c.ParamsInt("id")
 	if err != nil {
@@ -292,8 +300,6 @@ func BuscarImovel(c *fiber.Ctx) error {
 	}
 
 	var imovel models.Imovel
-
-	// Aqui carregamos TUDO que a interface IDetalhesImovel precisa
 	result := database.DB.
 		Preload("Inquilino").           // Traz o objeto Inquilino
 		Preload("HistoricoPagamentos"). // Traz o array de pagamentos
@@ -303,11 +309,15 @@ func BuscarImovel(c *fiber.Ctx) error {
 	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Imóvel não encontrado"})
 	}
-
+	if role, ok := c.Locals("role").(string); ok && role == models.RoleCliente {
+		if uid, ok := c.Locals("user_id").(uint); ok && (imovel.UserID == nil || *imovel.UserID != uid) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Imóvel não encontrado"})
+		}
+	}
 	return c.JSON(imovel)
 }
 
-// EditarImovel - Atualiza dados cadastrais
+// EditarImovel - Atualiza dados cadastrais (cliente só edita os próprios)
 func EditarImovel(c *fiber.Ctx) error {
 	id, err := c.ParamsInt("id")
 	if err != nil {
@@ -326,6 +336,11 @@ func EditarImovel(c *fiber.Ctx) error {
 			"campo":   "id",
 			"message": "Nenhum imóvel foi encontrado com o ID informado.",
 		})
+	}
+	if role, ok := c.Locals("role").(string); ok && role == models.RoleCliente {
+		if uid, ok := c.Locals("user_id").(uint); ok && (imovel.UserID == nil || *imovel.UserID != uid) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Imóvel não encontrado"})
+		}
 	}
 
 	// Lê o body como JSON raw antes de fazer parse
@@ -464,6 +479,8 @@ func EditarImovel(c *fiber.Ctx) error {
 	valorCondominioAntigo := imovel.ValorCondominio
 	valorIptuAntigo := imovel.ValorIptu
 	valorCaucaoAntigo := imovel.ValorCaucao
+	inquilinoIDAntigo := imovel.InquilinoID
+	novoInquilinoID := dadosAtualizados.InquilinoID
 
 	// Atualiza apenas os campos permitidos (exclui relacionamentos e campos de sistema)
 	// Omit exclui os relacionamentos e campos que não devem ser atualizados
@@ -479,6 +496,14 @@ func EditarImovel(c *fiber.Ctx) error {
 			"error":   "Erro ao atualizar imóvel",
 			"message": result.Error.Error(),
 		})
+	}
+
+	// Sincronizar o lado do inquilino: desvincular o inquilino antigo e vincular o novo
+	if inquilinoIDAntigo != nil && *inquilinoIDAntigo > 0 {
+		database.DB.Model(&models.Inquilino{}).Where("id = ?", *inquilinoIDAntigo).Update("imovel_id", nil)
+	}
+	if novoInquilinoID != nil && *novoInquilinoID > 0 {
+		database.DB.Model(&models.Inquilino{}).Where("id = ?", *novoInquilinoID).Update("imovel_id", imovel.ID)
 	}
 
 	// Verificar alterações de valores e criar registros no histórico
@@ -854,7 +879,7 @@ func resumoPorTipo(pagamentos []models.Pagamento, tipo string) (total, atrasados
 	return total, atrasados, nomes
 }
 
-// Resumo retorna totais e atrasados por tipo (aluguel, condominio, iptu) para o dashboard
+// Resumo retorna totais e atrasados por tipo (aluguel, condominio, iptu) e valor total dos alugueis a receber
 func Resumo(c *fiber.Ctx) error {
 	var pagamentos []models.Pagamento
 	if result := database.DB.Preload("Inquilino").Where("status IN ?", []string{"pendente", "atrasado"}).Find(&pagamentos); result.Error != nil {
@@ -863,7 +888,20 @@ func Resumo(c *fiber.Ctx) error {
 	totalAluguel, atrasadosAluguel, nomesAluguel := resumoPorTipo(pagamentos, "aluguel")
 	totalCond, atrasadosCond, nomesCond := resumoPorTipo(pagamentos, "condominio")
 	totalIptu, atrasadosIptu, nomesIptu := resumoPorTipo(pagamentos, "iptu")
+
+	var valorTotalAlugueisReceber float64
+	q := database.DB.Model(&models.Imovel{}).Select("COALESCE(SUM(valor_aluguel), 0)")
+	if role, ok := c.Locals("role").(string); ok && role == models.RoleCliente {
+		if uid, ok := c.Locals("user_id").(uint); ok {
+			q = q.Where("user_id = ?", uid)
+		}
+	}
+	if result := q.Scan(&valorTotalAlugueisReceber); result.Error != nil {
+		valorTotalAlugueisReceber = 0
+	}
+
 	return c.JSON(fiber.Map{
+		"valorTotalAlugueisReceber": valorTotalAlugueisReceber,
 		"alugueis": fiber.Map{
 			"total":          totalAluguel,
 			"atrasados":      atrasadosAluguel,

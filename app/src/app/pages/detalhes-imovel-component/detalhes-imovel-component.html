@@ -1,13 +1,13 @@
 <p-toast />
-<p-speeddial [model]="items" direction="up" [style]="{ position: 'fixed', right: 0, bottom: 0 }"
-    [buttonProps]="{ severity: 'help', rounded: true }" [tooltipOptions]="{ tooltipPosition: 'left' }" />
+<p-speeddial [model]="items" direction="up" class="fab-2" [buttonProps]="{ severity: 'success'}"
+    [tooltipOptions]="{ tooltipPosition: 'left' }" />
 
 <!-- Dialog para Histórico de Contratos -->
-<p-dialog [(visible)]="displayDialogHistoricoContratos" [modal]="true" [style]="{ width: '60rem' }" 
+<p-dialog [(visible)]="displayDialogHistoricoContratos" [modal]="true" [style]="{ width: '60rem' }"
     header="Histórico de Contratos" [draggable]="false" [resizable]="false">
     <div class="mt-4">
-        <p-table [value]="historicoContratos" [tableStyle]="{'min-width': '50rem'}" 
-            [paginator]="true" [rows]="10" [rowsPerPageOptions]="[5, 10, 20]">
+        <p-table [value]="historicoContratos" [tableStyle]="{'min-width': '50rem'}" [paginator]="true" [rows]="10"
+            [rowsPerPageOptions]="[5, 10, 20]">
             <ng-template #header>
                 <tr>
                     <th>Nome do Arquivo</th>
@@ -27,19 +27,14 @@
                     <td>{{ contrato.dataInsercao | date: 'dd/MM/yyyy HH:mm' }}</td>
                     <td>
                         @if (contrato.tamanhoArquivo) {
-                            {{ formatarTamanhoArquivo(contrato.tamanhoArquivo) }}
+                        {{ formatarTamanhoArquivo(contrato.tamanhoArquivo) }}
                         } @else {
-                            <span class="text-gray-400">-</span>
+                        <span class="text-gray-400">-</span>
                         }
                     </td>
                     <td>
-                        <p-button 
-                            label="Baixar" 
-                            icon="pi pi-download" 
-                            (onClick)="baixarContratoHistorico(contrato)"
-                            severity="secondary" 
-                            [outlined]="true"
-                            [size]="'small'">
+                        <p-button label="Baixar" icon="pi pi-download" (onClick)="baixarContratoHistorico(contrato)"
+                            severity="secondary" [outlined]="true" [size]="'small'">
                         </p-button>
                     </td>
                 </tr>
@@ -55,21 +50,22 @@
     </div>
     <ng-template #footer>
         <div class="flex justify-end">
-            <p-button label="Fechar" severity="secondary" (onClick)="fecharHistoricoContratos()" 
+            <p-button label="Fechar" severity="secondary" (onClick)="fecharHistoricoContratos()"
                 [outlined]="true"></p-button>
         </div>
     </ng-template>
 </p-dialog>
 
 <!-- Dialog para Adicionar/Editar Pagamento -->
-<p-dialog [(visible)]="displayDialogPagamento" [modal]="true" [style]="{ width: '50rem' }" 
-    [header]="editandoPagamento ? 'Editar Pagamento' : 'Adicionar Pagamento'"
+<p-dialog [(visible)]="displayDialogPagamento" [modal]="true" [style]="{ width: '50rem' }"
+    [contentStyle]="{ overflow: 'visible' }" [header]="editandoPagamento ? 'Editar Pagamento' : 'Adicionar Pagamento'"
     [draggable]="false" [resizable]="false">
     <div class="grid grid-cols-2 gap-4">
         <div class="col-span-1">
             <label for="tipo" class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
             <p-select [options]="tiposPagamento" [(ngModel)]="novoPagamento.tipo" optionLabel="label"
-                placeholder="Selecione o tipo" class="w-full" appendTo="body" />
+                (ngModelChange)="onTipoPagamentoChange($event)" placeholder="Selecione o tipo" class="w-full"
+                appendTo="body" />
         </div>
 
         <div class="col-span-1">
@@ -80,7 +76,7 @@
 
         <div class="col-span-1">
             <label for="dataVencimento" class="block text-sm font-medium text-gray-700 mb-2">Data de Vencimento</label>
-            <p-datepicker [(ngModel)]="novoPagamento.dataVencimento" dateFormat="dd/mm/yy" fluid />
+            <p-datepicker [(ngModel)]="novoPagamento.dataVencimento" dateFormat="dd/mm/yy" fluid appendTo="body" />
         </div>
 
         <div class="col-span-1">
@@ -105,102 +101,94 @@
     <p-card class="col-span-5" header="Dados do Imóvel">
         <div class="flex justify-end mb-3">
             @if (!editandoImovel) {
-                <p-button label="Editar" icon="pi pi-pencil" (onClick)="entrarModoEdicaoImovel()" 
-                    severity="secondary" [outlined]="true"></p-button>
+            <p-button label="Editar" icon="pi pi-pencil" (onClick)="entrarModoEdicaoImovel()" severity="secondary"
+                [outlined]="true"></p-button>
             } @else {
-                <div class="flex gap-2">
-                    <p-button label="Atualizar" icon="pi pi-check" (onClick)="salvarEdicaoImovel()"></p-button>
-                    <p-button label="Cancelar" icon="pi pi-times" (onClick)="cancelarEdicaoImovel()" 
-                        severity="secondary" [outlined]="true"></p-button>
-                </div>
+            <div class="flex gap-2">
+                <p-button label="Atualizar" icon="pi pi-check" (onClick)="salvarEdicaoImovel()"></p-button>
+                <p-button label="Cancelar" icon="pi pi-times" (onClick)="cancelarEdicaoImovel()" severity="secondary"
+                    [outlined]="true"></p-button>
+            </div>
             }
         </div>
         <div class="grid grid-cols-5 gap-4">
             <div class="col-span-5">
                 <p class="text-sm text-gray-600 mb-1">Endereço</p>
                 @if (!editandoImovel) {
-                    <p class="text-lg font-semibold">{{ imovel.endereco }}</p>
+                <p class="text-lg font-semibold">{{ imovel.endereco }}</p>
                 } @else {
-                    <input pInputText [(ngModel)]="imovelEditado.endereco" class="w-full" />
+                <input pInputText [(ngModel)]="imovelEditado.endereco" class="w-full" />
                 }
             </div>
 
             <div class="col-span-1">
                 <p class="text-sm text-gray-600 mb-1">Valor do Aluguel</p>
                 @if (!editandoImovel) {
-                    <p class="text-lg font-semibold text-green-600">{{ imovel.valorAluguel | currency: 'BRL' }}</p>
+                <p class="text-lg font-semibold text-green-600">{{ imovel.valorAluguel | currency: 'BRL' }}</p>
                 } @else {
-                    <p-inputNumber [(ngModel)]="imovelEditado.valorAluguel" mode="currency" currency="BRL" 
-                        locale="pt-BR" [style]="{ width: '100%' }"></p-inputNumber>
+                <p-inputNumber [(ngModel)]="imovelEditado.valorAluguel" mode="currency" currency="BRL" locale="pt-BR"
+                    [style]="{ width: '100%' }"></p-inputNumber>
                 }
             </div>
 
             <div class="col-span-1">
                 <p class="text-sm text-gray-600 mb-1">Valor do Condomínio</p>
                 @if (!editandoImovel) {
-                    <p class="text-lg font-semibold text-purple-600">{{ imovel.valorCondominio | currency: 'BRL' }}</p>
+                <p class="text-lg font-semibold text-purple-600">{{ imovel.valorCondominio | currency: 'BRL' }}</p>
                 } @else {
-                    <p-inputNumber [(ngModel)]="imovelEditado.valorCondominio" mode="currency" currency="BRL" 
-                        locale="pt-BR" [style]="{ width: '100%' }"></p-inputNumber>
+                <p-inputNumber [(ngModel)]="imovelEditado.valorCondominio" mode="currency" currency="BRL" locale="pt-BR"
+                    [style]="{ width: '100%' }"></p-inputNumber>
                 }
             </div>
 
             <div class="col-span-1">
                 <p class="text-sm text-gray-600 mb-1">Valor do IPTU</p>
                 @if (!editandoImovel) {
-                    <p class="text-lg font-semibold text-orange-600">{{ imovel.valorIptu | currency: 'BRL' }}</p>
+                <p class="text-lg font-semibold text-orange-600">{{ imovel.valorIptu | currency: 'BRL' }}</p>
                 } @else {
-                    <p-inputNumber [(ngModel)]="imovelEditado.valorIptu" mode="currency" currency="BRL" 
-                        locale="pt-BR" [style]="{ width: '100%' }"></p-inputNumber>
+                <p-inputNumber [(ngModel)]="imovelEditado.valorIptu" mode="currency" currency="BRL" locale="pt-BR"
+                    [style]="{ width: '100%' }"></p-inputNumber>
                 }
             </div>
 
             <div class="col-span-1">
                 <p class="text-sm text-gray-600 mb-1">Valor do Caução</p>
                 @if (!editandoImovel) {
-                    <p class="text-lg font-semibold text-blue-600">{{ imovel.valorCaucao | currency: 'BRL' }}</p>
+                <p class="text-lg font-semibold text-blue-600">{{ imovel.valorCaucao | currency: 'BRL' }}</p>
                 } @else {
-                    <p-inputNumber [(ngModel)]="imovelEditado.valorCaucao" mode="currency" currency="BRL" 
-                        locale="pt-BR" [style]="{ width: '100%' }"></p-inputNumber>
+                <p-inputNumber [(ngModel)]="imovelEditado.valorCaucao" mode="currency" currency="BRL" locale="pt-BR"
+                    [style]="{ width: '100%' }"></p-inputNumber>
                 }
             </div>
 
             <div class="col-span-1">
                 <p class="text-sm text-gray-600 mb-1">Data de Início do Contrato</p>
                 @if (!editandoImovel) {
-                    <p class="text-lg font-semibold">{{ imovel.dataInicioContrato | date: 'dd/MM/yyyy' }}</p>
+                <p class="text-lg font-semibold">{{ imovel.dataInicioContrato | date: 'dd/MM/yyyy' }}</p>
                 } @else {
-                    <p-datepicker [(ngModel)]="dataInicioContratoEditada" dateFormat="dd/mm/yy" fluid></p-datepicker>
+                <p-datepicker [(ngModel)]="dataInicioContratoEditada" dateFormat="dd/mm/yy" fluid></p-datepicker>
                 }
             </div>
             @if(!editandoImovel){
-                <div class="col-span-5 mt-2">
-                    <div class="flex gap-2">
-                        <p-button label="Baixar Contrato PDF" icon="pi pi-download" (onClick)="downloadContrato()"
-                            severity="secondary" [outlined]="true">
-                        </p-button>
-                        <p-button label="Ver Histórico de Contratos" icon="pi pi-history" (onClick)="abrirHistoricoContratos()"
-                            severity="secondary" [outlined]="true">
-                        </p-button>
-                    </div>
+            <div class="col-span-5 mt-2">
+                <div class="flex gap-2">
+                    <p-button label="Baixar Contrato PDF" icon="pi pi-download" (onClick)="downloadContrato()"
+                        severity="secondary" [outlined]="true">
+                    </p-button>
+                    <p-button label="Ver Histórico de Contratos" icon="pi pi-history"
+                        (onClick)="abrirHistoricoContratos()" severity="secondary" [outlined]="true">
+                    </p-button>
                 </div>
+            </div>
             }
 
             @if (editandoImovel) {
-                <div class="col-span-5">
-                    <p class="text-sm text-gray-600 mb-1">Enviar Novo Contrato</p>
-                    <p-fileupload #fu
-                    id="arquivoContrato"
-                    mode="basic"
-                    chooseLabel="Escolha"
-                    chooseIcon="pi pi-upload"
-                    name="demo[]"
-                    url="https://www.primefaces.org/cdn/api/upload.php"
-                    accept="image/*"
-                    maxFileSize="1000000"
-                    (onUpload)="onFileSelected($event)"
-                />
-                </div>
+            <div class="col-span-5">
+                <p class="text-sm text-gray-600 mb-1">Enviar Novo Contrato</p>
+                <p-fileupload #fu id="arquivoContrato" mode="basic" chooseLabel="Escolha" chooseIcon="pi pi-upload"
+                    name="demo[]" url="https://www.primefaces.org/cdn/api/upload.php" accept="image/*"
+                    maxFileSize="1000000" (onUpload)="onFileSelected($event)" />
+            </div>
             }
         </div>
     </p-card>
@@ -209,43 +197,39 @@
     <p-card class="col-span-2" header="Dados do Inquilino">
         <div class="flex justify-end mb-3">
             @if (!editandoImovel) {
-                <p-button label="Editar" icon="pi pi-pencil" (onClick)="entrarModoEdicaoImovel()" 
-                    severity="secondary" [outlined]="true"></p-button>
+            <p-button label="Editar" icon="pi pi-pencil" (onClick)="entrarModoEdicaoImovel()" severity="secondary"
+                [outlined]="true"></p-button>
             } @else {
-                <div class="flex gap-2">
-                    <p-button label="Atualizar" icon="pi pi-check" (onClick)="salvarEdicaoImovel()"></p-button>
-                    <p-button label="Cancelar" icon="pi pi-times" (onClick)="cancelarEdicaoImovel()" 
-                        severity="secondary" [outlined]="true"></p-button>
-                </div>
+            <div class="flex gap-2">
+                <p-button label="Atualizar" icon="pi pi-check" (onClick)="salvarEdicaoImovel()"></p-button>
+                <p-button label="Cancelar" icon="pi pi-times" (onClick)="cancelarEdicaoImovel()" severity="secondary"
+                    [outlined]="true"></p-button>
+            </div>
             }
         </div>
         <div class="space-y-4">
+            @if (!editandoImovel) {
             <div>
                 <p class="text-sm text-gray-600 mb-1">Nome</p>
-                @if (!editandoImovel) {
-                    <p class="text-lg font-semibold">{{ imovel.inquilino.nome }}</p>
-                } @else {
-                    <input pInputText [(ngModel)]="imovelEditado.inquilino.nome" class="w-full" />
-                }
+                <p class="text-lg font-semibold">{{ imovel.inquilino.nome }}</p>
             </div>
-
             <div>
                 <p class="text-sm text-gray-600 mb-1">Telefone</p>
-                @if (!editandoImovel) {
-                    <p class="text-lg">{{ imovel.inquilino.telefone }}</p>
-                } @else {
-                    <input pInputText [(ngModel)]="imovelEditado.inquilino.telefone" class="w-full" />
-                }
+                <p class="text-lg">{{ imovel.inquilino.telefone }}</p>
             </div>
-
             <div>
                 <p class="text-sm text-gray-600 mb-1">Email</p>
-                @if (!editandoImovel) {
-                    <p class="text-lg">{{ imovel.inquilino.email }}</p>
-                } @else {
-                    <input pInputText type="email" [(ngModel)]="imovelEditado.inquilino.email" class="w-full" />
-                }
+                <p class="text-lg">{{ imovel.inquilino.email }}</p>
             </div>
+            } @else {
+            <div>
+                <label for="inquilinoSelect" class="block text-sm font-medium text-gray-700 mb-2">Inquilino (apenas sem
+                    imóvel vinculado na conta)</label>
+                <p-select inputId="inquilinoSelect" [(ngModel)]="selectedInquilinoId" [options]="inquilinosParaSelect"
+                    optionLabel="nome" optionValue="id" placeholder="Selecione o inquilino" [showClear]="true"
+                    [style]="{ width: '100%' }" />
+            </div>
+            }
         </div>
     </p-card>
 
@@ -289,14 +273,8 @@
                         }
                     </td>
                     <td>
-                        <p-button 
-                            icon="pi pi-pencil" 
-                            (onClick)="editarPagamento(pagamento)"
-                            severity="secondary" 
-                            [outlined]="true"
-                            [size]="'small'"
-                            [rounded]="true"
-                            title="Editar pagamento">
+                        <p-button icon="pi pi-pencil" (onClick)="editarPagamento(pagamento)" severity="secondary"
+                            [outlined]="true" [size]="'small'" [rounded]="true" title="Editar pagamento">
                         </p-button>
                     </td>
                 </tr>
@@ -325,7 +303,8 @@
                 </div>
                 }
                 @for(mensagem of mensagens; track mensagem.id) {
-                <div class="mensagem" [ngClass]="{'mensagem-usuario': mensagem.remetente === 'usuario', 'mensagem-assistente': mensagem.remetente === 'assistente'}">
+                <div class="mensagem"
+                    [ngClass]="{'mensagem-usuario': mensagem.remetente === 'usuario', 'mensagem-assistente': mensagem.remetente === 'assistente'}">
                     <div class="mensagem-conteudo">
                         <div class="mensagem-header">
                             @if(mensagem.remetente === 'usuario') {
@@ -354,21 +333,10 @@
             </div>
             <div class="chat-input-container">
                 <div class="flex gap-2 w-full">
-                    <input 
-                        type="text" 
-                        pInputText 
-                        [(ngModel)]="novaMensagem" 
-                        (keydown.enter)="enviarMensagem()"
-                        placeholder="Digite sua dúvida aqui..."
-                        class="flex-1"
-                        [disabled]="enviandoMensagem"
-                    />
-                    <p-button 
-                        icon="pi pi-send" 
-                        (onClick)="enviarMensagem()"
-                        [disabled]="!novaMensagem.trim() || enviandoMensagem"
-                        [loading]="enviandoMensagem"
-                    ></p-button>
+                    <input type="text" pInputText [(ngModel)]="novaMensagem" (keydown.enter)="enviarMensagem()"
+                        placeholder="Digite sua dúvida aqui..." class="flex-1" [disabled]="enviandoMensagem" />
+                    <p-button icon="pi pi-send" (onClick)="enviarMensagem()"
+                        [disabled]="!novaMensagem.trim() || enviandoMensagem" [loading]="enviandoMensagem"></p-button>
                 </div>
             </div>
         </div>

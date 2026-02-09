@@ -22,19 +22,12 @@ func SetupRoutes(app *fiber.App) {
 	users.Put("/:id", handlers.UpdateCliente)
 	users.Post("/:id/deactivate", handlers.DeactivateCliente)
 
-	// --- NOVAS ROTAS DE INQUILINOS ---
-	inquilinos := api.Group("/inquilinos")
-
-	// POST /api/inquilinos -> Cria novo
-	inquilinos.Post("/", handlers.CriarInquilino)
-
-	// PUT /api/inquilinos/:id -> Edita existente (passando o ID na URL)
-	inquilinos.Put("/:id", handlers.EditarInquilino)
-
-	// GET /api/inquilinos -> Lista todos
+	// --- ROTAS DE INQUILINOS (requer auth; cliente vê/só edita os próprios) ---
+	inquilinos := api.Group("/inquilinos", middleware.RequireAuth)
 	inquilinos.Get("/", handlers.ListarInquilinos)
-	// Importante: Coloque rotas com parâmetros (/:id) depois das rotas fixas, se houver
+	inquilinos.Post("/", handlers.CriarInquilino)
 	inquilinos.Get("/:id", handlers.BuscarInquilino)
+	inquilinos.Put("/:id", handlers.EditarInquilino)
 
 	// --- RESUMO (dashboard) ---
 	api.Get("/resumo", middleware.RequireAuth, handlers.Resumo)
@@ -43,10 +36,10 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/indices", middleware.RequireAuth, handlers.GetIndices)
 	api.Post("/indices/atualizar", middleware.RequireAuth, middleware.RequireAdmin, handlers.AtualizarIndices)
 
-	// --- ROTAS DE IMÓVEIS ---
-	imoveis := api.Group("/imoveis")
-	imoveis.Post("/", middleware.RequireAuth, handlers.CriarImovel)               // Criar (requer login; se for cliente, imóvel fica vinculado a ele)
-	imoveis.Get("/", handlers.ListarImoveis)                                      // Listar Todos
+	// --- ROTAS DE IMÓVEIS (requer auth; cliente vê/só edita os próprios) ---
+	imoveis := api.Group("/imoveis", middleware.RequireAuth)
+	imoveis.Get("/", handlers.ListarImoveis)
+	imoveis.Post("/", handlers.CriarImovel)
 	imoveis.Get("/:imovelId/contratos/:contratoId", handlers.BaixarContratoPorId) // Baixar contrato específico
 	imoveis.Get("/:id/contratos", handlers.ListarContratos)                       // Listar todos os contratos
 	imoveis.Get("/:id/contrato", handlers.BaixarContratoMaisRecente)              // Baixar contrato mais recente

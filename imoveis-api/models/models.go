@@ -47,10 +47,11 @@ type Imovel struct {
 // Inquilino reflete ILocatario
 type Inquilino struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
+	UserID    *uint     `json:"user_id" gorm:"column:user_id"` // dono (cliente); null = legado/admin
 	Nome      string    `json:"nome"`
 	Telefone  string    `json:"telefone"` // String é melhor para telefone
 	Email     string    `json:"email"`
-	ImovelID  *uint     `json:"aluguel_id"` // Ponteiro permite ser null se não tiver alugado
+	ImovelID  *uint     `json:"aluguel_id" gorm:"column:imovel_id"` // id do imóvel; sincronizado com imoveis.inquilino_id
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

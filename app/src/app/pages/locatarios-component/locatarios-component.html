@@ -6,13 +6,12 @@
     severity="primary"
     size="large"
     class="fab"
->
-</a>
+></a>
 <div class="grid grid-cols-5 gap-5">
     <p-card class="col-span-5">
         <h3>Locatários</h3>
 
-        @if (locatarios?.length) {
+        @if (locatarios.length) {
             <p-table [value]="locatarios" stripedRows [tableStyle]="{'min-width': '50rem'}">
                 <ng-template #header>
                     <tr>
