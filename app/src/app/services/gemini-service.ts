@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GEMINI_API_KEY } from '../env.generated';
 
 @Injectable({
   providedIn: 'root',
@@ -24,8 +25,7 @@ export class GeminiService {
   }
 
   initializeGemini(): void {
-    this.apiKey = 'AIzaSyCqYAdpm8mHVgImydfcBFtbdRtW1H54FbM';
-    
+    this.apiKey = GEMINI_API_KEY || '';
     if (!this.apiKey) {
       console.warn('Gemini API Key não configurada. Configure a chave antes de usar o serviço.');
       return;
